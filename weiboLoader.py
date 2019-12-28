@@ -195,7 +195,7 @@ def main():
         if fetched[hour]==0:
             st=time.time()
             while True:
-                hotrank=fetchHotRankLocal(hour)
+                #hotrank=fetchHotRankLocal(hour)
                 if True:
                     print('HOT-RANK NOT THERE YET HOUR: ',hour)
                     maxtry_rank:int=10
