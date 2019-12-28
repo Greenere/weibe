@@ -19,15 +19,10 @@ scrollNum:int=5
 
 chrome_options = Options()
 chrome_options.add_argument('--headless')
-browserh = webdriver.Chrome(chrome_options=chrome_options)
-browserh.set_window_size(500, 700)
-browsert = webdriver.Chrome(chrome_options=chrome_options)
-browsert.set_window_size(500,700)
 
 def hotRank(hour:int=time.localtime().tm_hour) -> dict:
-    global browserh
-
-    browser=browserh
+    browser = webdriver.Chrome(chrome_options=chrome_options)
+    browser.set_window_size(500, 700)
     browser.get('https://m.weibo.cn/')
     wait = WebDriverWait(browser, 10)
     wait.until(
@@ -70,10 +65,9 @@ def hotRank(hour:int=time.localtime().tm_hour) -> dict:
     return hot
 
 def fetchTopic(topic:str,rank:int=0,scrollnum:int=20,hour:int=time.localtime().tm_hour) -> dict:
-    global browsert
-
     stf=time.time()
-    browser=browsert
+    browser = webdriver.Chrome(chrome_options=chrome_options)
+    browser.set_window_size(500, 700)
     browser.get('https://m.weibo.cn/')
     wait = WebDriverWait(browser, 10)
     wait.until(
@@ -218,13 +212,13 @@ def main():
                     hotrank:dict=fetchHotRankLocal(hour)
                 for rank in range(50):
                     print('FETCHING-RANK: ',rank)
-                    topic=hotrank['rank'][str(rank)]
                     maxtry_topic:int=10
                     while True:
                         if maxtry_topic < 1:
                             print('TOPIC-WEIBO-FETCH-MAXTRY-EXCEEDED')
                             break
                         try:
+                            topic=hotrank['rank'][str(rank)]
                             fetchTopic(topic, rank,scrollnum=scrollNum, hour=hour)
                             break
                         except:
