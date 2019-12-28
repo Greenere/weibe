@@ -14,8 +14,6 @@ import jieba
 from Analysis import Analysis
 from snownlp import SnowNLP
 
-flag=0
-fetchMap=[0 for i in range(50)]
 scrollNum:int=5
 
 def hotRank(hour:int=time.localtime().tm_hour) -> dict:

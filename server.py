@@ -1,5 +1,10 @@
 from gevent.pywsgi import WSGIServer
 from weibeServer import app
+from weiboLoader import main
+from threading import Thread
+
+weibeloader=Thread(target=main)
+weibeloader.start()
 
 host:str='0.0.0.0'
 host:str='localhost'
