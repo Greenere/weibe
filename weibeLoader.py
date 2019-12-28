@@ -18,10 +18,9 @@ flag=0
 fetchMap=[0 for i in range(50)]
 scrollNum:int=5
 
-chrome_options = Options()
-chrome_options.add_argument('--headless')
-
 def hotRank(hour:int=time.localtime().tm_hour) -> dict:
+    chrome_options = Options()
+    chrome_options.add_argument('--headless')
     browser = webdriver.Chrome(chrome_options=chrome_options)
     browser.set_window_size(500, 700)
     browser.get('https://m.weibo.cn/')
@@ -67,6 +66,8 @@ def hotRank(hour:int=time.localtime().tm_hour) -> dict:
 
 def fetchTopic(topic:str,rank:int=0,scrollnum:int=20,hour:int=time.localtime().tm_hour) -> dict:
     stf=time.time()
+    chrome_options = Options()
+    chrome_options.add_argument('--headless')
     browser = webdriver.Chrome(chrome_options=chrome_options)
     browser.set_window_size(500, 700)
     browser.get('https://m.weibo.cn/')
