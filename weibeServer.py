@@ -153,7 +153,7 @@ def dataServe():
             for weibe in weibes:
                 rep = {
                     'author': weibe['author'],
-                    'content': weibe['content'],
+                    'content': '',#weibe['content'],
                     'positive': weibe['positive'],
                     'reposts': weibe['reposts'],
                     'comments': weibe['comments'],
