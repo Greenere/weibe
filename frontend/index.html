@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8"/>
+        <title>微情感-WEIBEMOTION</title> 
+        <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+        <style type="text/css">
+        body{
+            zoom:0.9;
+            background-color: #262932;
+            font-family: Arial, Helvetica, sans-serif;
+            color: rgba(255,200,150,0.8);
+            text-shadow: 2px 2px 2px rgba(0,0,0,1);
+        }
+        a{
+            text-decoration: none;
+        }
+        .head{
+            margin: 8px auto;
+            text-align: center;
+            color:rgba(255,200,150,0.8);
+        }
+        .head h2{
+            margin: 2px auto;;
+            text-align: left;
+            padding-left: 5%;
+        }
+        .main{
+            width: 88%;
+            margin: 5px auto;
+            border-style: dotted;
+            border-width: 0.5px;
+            border-color:rgba(255,200,150,0.2);
+        }
+        #main{
+            width: 800px;
+            margin: 2px auto;
+            border-style: dashed;
+            border-width: 0.5px;
+            border-color: rgba(255,255,255,0.5);
+            text-align: left;
+        }
+        #now-main{
+            height: 400px;
+            padding: 2px;
+        }
+        #now-cloud{
+            font-size: small;
+        }
+        #container{
+            position: relative;
+            height: 98%;
+            width: 99%;
+            left: 0.5%;
+            top: 1%;
+            background-color: rgba(250,235,215,0.2);
+            box-shadow: 1px 1px 2px rgba(0,0,0,1);
+        }
+        #chart-box{
+            height: 100%;
+            width: 100%;
+            left: 0%;
+            top: 0%;
+            display:block;
+        }
+        #cloud-box{
+            height: 450px;
+            width: 920px;
+            left: -115px;
+            top: -30px;
+            display: none;
+        }
+        .hot_block{
+            margin: 5px 5px;
+            padding-left: 1%;
+            height: 28px;
+            background-color: rgba(250,235,215,0.2);
+            box-shadow: 1px 1px 2px rgba(0,0,0,1);
+            text-shadow: none;
+            font-size: 18px;
+        }
+        .hot_block:hover{
+            background-color: rgba(255,255,255,0.5);
+            color: black;
+            margin: 5px 0px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .hot_block:active{
+            margin: 5px 2px;
+            font-weight: bold;
+        }
+        .hot_block_checked{
+            margin: 5px 2px;
+            padding-left: 1%;
+            height: 28px;
+            color: black;
+            background-color: rgba(255,255,255,0.5);
+            box-shadow: 1px 1px 2px rgba(0,0,0,1);
+            text-shadow: none;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        .ctrl{
+            position: relative;
+            padding-left: 6%;
+            z-index: 100;
+        }
+        .ctrl b{
+            color: rgba(250,235,215,0.2);
+            text-shadow: none;
+            font-size:x-large;
+        }
+        .ctrl .button{
+            cursor: pointer;
+            color: rgba(250,235,215,0.8);
+        }
+        .ctrl .button:hover{
+            color: rgba(255,200,150,1);
+        }
+        .ctrl .button_checked{
+            color: rgba(255,200,150,1);
+        }
+        #hot-info{
+            font-size: medium;
+        }
+        #side-tool{
+            position:fixed; 
+            top: 3%;
+            right: 10px;
+            z-index: 100;
+            font-size: 20px;
+        }
+        #side-set-box{
+            width: 50px;
+            height: 50px; 
+        }
+        </style>
+        <script type="text/javascript" src="https://assets.pyecharts.org/assets/echarts.min.js"></script>
+        <script type="text/javascript" src="https://assets.pyecharts.org/assets/echarts-wordcloud.min.js"></script>
+        <script type="text/javascript" src="https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+        <script type="text/javascript">
+        //标志变量
+        var index=1;//热搜榜页码
+        var preCount=0;//选择计数
+        var cloud=0;//词云
+        var example=0;//示例模式
+        var allMode=0;//全局模式
+        var activeColor="rgba(250,235,215,0.8)";//活跃按钮颜色
+        var dormantColor="rgba(250,235,215,0.2)";//休眠按钮颜色
+        //热搜榜
+        document.hotrank=[];
+        //话题选择标志变量
+        document.checkStatus=[];
+        for(var i=0;i<50;i++){
+            document.checkStatus[i]=0;
+        }
+        //提示信息函数
+        function clearHotInfo(){
+            document.getElementById("hot-info").innerText="";
+        }
+        function setHotInfo(info){
+            document.getElementById("hot-info").innerText=info;
+            setTimeout(function(){clearHotInfo();},5000);
+        }
+        //数据请求函数
+        function requestData(reqs,messageHandler,errorHandler){
+            var host='localhost';
+            //var host='193.112.33.19'
+            var port='8880';
+            $.ajax({
+                type : "GET",
+                contentType: "application/json;charset=UTF-8",
+                url : "http://"+host+":"+port+"/data",
+                data : {"request":JSON.stringify(reqs)},
+                success :function(result){
+                    messageHandler(result);
+                },
+                error : function(e){
+                    errorHandler();
+                }
+            });
+        }
+        //获取热搜榜
+        function fetchHotRank(newHot=false){
+            requestData(
+                reqs={
+                    "require":"hot-rank",
+                    "new":newHot,
+                    "example":example
+                },
+                messageHandler=function(result){
+                    var response=result;
+                    //console.log(response.rank);
+                    if (response.ready==1){
+                        document.hotrank=response.rank;
+                        setHotInfo("热搜榜已经获得");
+                        setindex();
+                    }else{
+                        document.hotrank=[];
+                        setHotInfo("热搜榜暂未获取");
+                        setindex();
+                    }
+                },
+                errorHandler=function(){
+                    setHotInfo("请求出现错误...");
+                }
+            )
+        }
+        fetchHotRank();
+        </script>
+    </head>
+    <body>
+        <div id='head' class="head">
+            <h1 id='weibe-title'>微情感 WEIBEMOTION</h1>
+        </div>
+        <div id='main'>
+            <div id="now-what">
+                <div id="now-head" class="head">
+                    <h2>微情感</h2>
+                </div>
+                <div id="now-ctrl" class="ctrl" onselectstart="return false">
+                    <b id="now-cloud" class="button" onclick="nowCloud(event);">
+                        ☁ 词云
+                    </b>  
+                    <b id="now-info"></b>
+                </div>
+                <div id="now-main" class="main">
+                    <div id="container">
+                        <div id="chart-box"></div>
+                        <div id="cloud-box"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="hot-rank" onselectstart="return false">
+                <div id="hot-head" class="head">
+                    <h2>热搜榜</h2>
+                </div>
+                <div id="hot-ctrl" class="ctrl">
+                    <b id="hot-new" class="button" onclick="hotNew();" title="刷新">↻</b>  
+                    <b id="hot-prev" class="button" onclick="hotPrev();" title="上一页">◄</b>  
+                    <b id="hot-next" class="button" onclick="hotNext();" title="下一页">►</b>  
+                    <b id="hot-select-all" class="button" onclick="hotSelectAll();" title="全部选择">✔</b> 
+                    <b id="hot-cancel-all" class="button" onclick="hotCancelAll();" title="全部取消">✖</b>  
+                    <b id="hot-select" class="button" onclick="hotSelect();" title="本页全选">☰</b>   
+                    <b id="hot-cancel" class="button" onclick="hotCancel();" title="本页取消">☷</b>
+                    <b id="index1" onclick="hotIndex(event);">㊀</b>   
+                    <b id="index2" onclick="hotIndex(event);">㊁</b>   
+                    <b id="index3" onclick="hotIndex(event);">㊂</b>   
+                    <b id="index4" onclick="hotIndex(event);">㊃</b>   
+                    <b id="index5" onclick="hotIndex(event);">㊄</b>
+                    <b id="hot-info"></b>
+                </div>
+                <div id="hot-main" class="main">
+                </div>
+            </div>
+            <div id="side-tool" onselectstart="return false">
+                <div id="side-set-box" class="ctrl">
+                    <b id="side-about" class="button" title="关于···">
+                        <a href="about.html" target="_blank">🔠</a>
+                    </b>
+                    <b id="side-mode" class="button" title="示例数据" onclick="exampleMode(event);">
+                        🎦
+                    </b>
+                </div>
+            </div>
+        </div>
+        <script type="text/javascript">
+        //热搜榜页面初始化
+        var hotMain=document.getElementById('hot-main');
+        for(i=0;i<10;i++){
+            var id="hot"+i;
+            var hotBlock=document.createElement('div');
+            hotBlock.setAttribute("id",id);
+            hotBlock.setAttribute("class","hot_block");
+            hotBlock.setAttribute("onclick","hot(event);");
+            hotMain.append(hotBlock);
+        }
+        </script>
+        <script type="text/javascript">
+        //设置页码标志
+        function setindexSign(){
+            document.getElementById('index'+index).style.setProperty("color",activeColor);
+        }
+        //设置话题选择状态
+        function setHotCheck(hotBlock,hotId){
+            if(document.checkStatus[hotId]==1){
+                hotBlock.setAttribute("class","hot_block hot_block_checked");
+            }else if(document.checkStatus[hotId]==0){
+                hotBlock.setAttribute("class","hot_block");
+            }
+        }
+        //设置页码
+        function setindex(){
+            setindexSign();
+            for(var i=0;i<10;i++){
+                var hotId=i+(index-1)*10;
+                var hotBlock=document.getElementById('hot'+i);
+                if(document.hotrank[hotId+""]){
+                    hotBlock.innerText=1+hotId+" ▬ "+document.hotrank[hotId+""];
+                }else{
+                    hotBlock.innerText="";
+                }
+                setHotCheck(hotBlock,hotId);
+            };
+        }
+        //页码点选
+        function hotIndex(event){
+            document.getElementById('index'+index).style.setProperty("color",dormantColor);
+            index=Number(event.target.id[5]);
+            setindex();
+        }
+        //上一页
+        function hotPrev(){
+            document.getElementById('index'+index).style.setProperty("color",dormantColor);
+            index-=1;
+            if (index<1){
+                index=5;
+            }
+            setindex();
+        }
+        //下一页
+        function hotNext(){
+            document.getElementById('index'+index).style.setProperty("color",dormantColor);
+            index+=1;
+            if(index>5){
+                index=1;
+            }
+            setindex();
+        }
+        //刷新
+        function hotNew(){
+            for(var i=0;i<50;i++){
+                if (document.checkStatus[i]==1){
+                    //document.checkStatus[i]=0
+                    setHotInfo("有被选中的话题，暂时不能刷新");
+                    return false;
+                }
+            }
+            setHotInfo("刷新中...")
+            fetchHotRank(newHot=true);
+        }
+        //切换信息图
+        function switchChart(){
+            if(cloud==1){
+                document.getElementById('chart-box').style.setProperty("display","none");
+                document.getElementById('cloud-box').style.setProperty("display","block");
+            }else{
+                document.getElementById('chart-box').style.setProperty("display","block");
+                document.getElementById('cloud-box').style.setProperty("display","none");
+            }
+            //presentEmotion();
+        }
+        //词云-情感切换
+        function nowCloud(event){
+            var cloudButton=document.getElementById(event.target.id);
+            if(cloud==0){
+                cloudButton.setAttribute("class","button button_checked");
+                cloudButton.innerText="☀ 情感";
+            }else{
+                cloudButton.setAttribute("class","button");
+                cloudButton.innerText="☁ 词云";
+            }
+            cloud=1-cloud;
+            switchChart();
+        }
+        //示例模式按钮
+        function exampleMode(event){
+            var exampleButton=document.getElementById(event.target.id);
+            if (example==0){
+                exampleButton.innerText="🔛";
+                exampleButton.title="真实数据";
+                setHotInfo("示例模式已经打开");
+                hotCancelAll();
+            }else{
+                exampleButton.innerText="🎦";
+                exampleButton.title="示例模式";
+                setHotInfo("示例模式已经关闭");
+                hotCancelAll();
+            }
+            example=1-example;
+            fetchHotRank();
+        }
+        //本页全选
+        function hotSelect(){
+            for (var i=0;i<10;i++){
+                var hotId=i+(index-1)*10;
+                var hotBlock=document.getElementById("hot"+i);
+                document.checkStatus[hotId]=1;
+                setHotCheck(hotBlock,hotId);
+            }
+            presentEmotion();
+        }
+        //全选
+        function hotSelectAll(){
+            for(var i=0;i<50;i++){
+                if(document.checkStatus[i]==0){
+                    document.checkStatus[i]=1;
+                }
+            }
+            for (var i=0;i<10;i++){
+                var hotId=i+(index-1)*10;
+                var hotBlock=document.getElementById("hot"+i);
+                setHotCheck(hotBlock,hotId);
+            }
+            presentEmotion();
+        }
+        //本页取消
+        function hotCancel(){
+            for (var i=0;i<10;i++){
+                var hotId=i+(index-1)*10;
+                var hotBlock=document.getElementById("hot"+i);
+                document.checkStatus[hotId]=0;
+                setHotCheck(hotBlock,hotId);
+                //hotRemove(hotId);
+            }
+            presentEmotion();
+        }
+        //全部取消
+        function hotCancelAll(){
+            for(var i=0;i<50;i++){
+                if(document.checkStatus[i]==1){
+                    document.checkStatus[i]=0;
+                }
+            }
+            for (var i=0;i<10;i++){
+                var hotId=i+(index-1)*10;
+                hotBlock=document.getElementById("hot"+i);
+                setHotCheck(hotBlock,hotId);
+            }
+            presentEmotion();
+        }
+        //话题选择
+        function hot(event){
+            var targetId=event.target.id;
+            var hotId=Number(targetId[3])+(index-1)*10;
+            var hotBlock=document.getElementById(targetId);
+            document.checkStatus[hotId]=1-document.checkStatus[hotId];
+            setHotCheck(hotBlock,hotId);
+            presentEmotion();
+        }
+        //话题计数
+        function preCounting(){
+            var preCount=0;
+            for(c in document.checkStatus){
+                    if (document.checkStatus[c]==1){
+                        preCount+=1;
+                    }
+            }
+            return preCount;
+        }
+        //全局模式设置
+        function allModing(){
+            preCount=preCounting();
+            if(preCount>15){
+                allMode=1;
+                //setHotInfo("全局模式已经开启,只显示较大的点")
+            }else{
+                //setHotInfo("全局模式已经关闭");
+                allMode=0;
+            }
+        }
+        //情感信息展示
+        function presentEmotion(){
+            //清除情感图
+            document.option=document.chart.getOption();
+            document.option.series=[document.scaler];
+            document.chart.setOption(document.option,true);
+            //清除词云图
+            document.cloudoption=document.cloud.getOption();
+            document.cloudoption.series=[];
+            document.cloud.setOption(document.cloudoption,true);
+            //获取话题
+            allModing();
+            fetchTopics();
+        }
+        //获取话题
+        function fetchTopics(){
+            requestData(
+                reqs={
+                    "require":"topic",
+                    "checkstatus":document.checkStatus,
+                    "hotrank":document.hotrank,
+                    "example":example
+                },
+                messageHandler=function(result){
+                    var response=result;
+                    var ranks=response['ranks'];
+                    var cloudseries=response['cloudseries'];
+                    document.cloudoption.series=cloudseries;
+                    document.cloud.setOption(document.cloudoption,true);
+                    //console.log(ranks);
+                    //console.log(response);
+                    //document.option.color=['white'];
+                    document.option.legend[0].data=[];
+                    document.option.color=['white'];
+                    for(rk in ranks){
+                        rank=ranks[rk];
+                        if (response['ready'][rank]==0){
+                            console.log(document.hotrank[rank]+' NOT READY');
+                            setHotInfo('#'+document.hotrank[rank]+'#'+'暂未获取完成');
+                            var indexId=rank-(index-1)*10;
+                            if(indexId<10 && indexId>-1){
+                               document.getElementById('hot'+indexId).setAttribute("class","hot_block");
+                            }
+                            document.checkStatus[rank]=0;
+                            continue;
+                        }
+                        var pointData=[];
+                        //console.log(reps);
+                        for(ri in response[rank]){
+                            rep=response[rank][ri];
+                            point=[
+                                Number(rep['x']),
+                                Number(rep['y']),
+                                Number(rep['size'])+1-allMode,
+                                rep["author"],
+                                rep["content"],
+                                rep["reposts"],
+                                rep["comments"],
+                                rep["attitudes"]
+                            ]
+                            pointData.push(point);
+                        }
+                        //console.log(pointData);
+                        var seriesData={
+                                name: document.hotrank[rank],
+                                type: 'scatter',
+                                itemStyle:itemStyle,
+                                label: {
+                                    emphasis: {
+                                        show: false,
+                                        position: 'top',
+                                        textStyle: {
+                                            color: 'rgba(250,235,215,0.5)',
+                                            fontSize: 14
+                                        },
+                                        formatter: function (obj) {
+                                            var author=obj.value[3];
+                                            var size=obj.value[2];
+                                            if (size>1){
+                                                return author;
+                                            }else{
+                                                return '';
+                                            }
+                                        }
+                                    }
+                                },
+                                symbolSize: function (val) {
+                                    return val[2] * 5;
+                                },
+                                //blendMode: 'lighter',
+                                data: pointData,
+                                large:true
+                        }
+                        document.option.series.push(seriesData); 
+                        document.option.color.push(colors[rank]);
+                        if (allMode==0){
+                            document.option.legend[0].data.push(document.hotrank[rank]);
+                        }
+                        //document.option.legend[0].data.push(document.hotrank[rank]);
+                        //document.option.color.push(colors[rank+1]);
+                    }
+                    document.chart.setOption(document.option,true);
+                },
+                errorHandler=function(){
+                    setHotInfo("请求出现错误...");
+                    //hotCancelAll();
+                }
+            )
+        }
+        setindexSign();
+        </script>
+        <script type="text/javascript">
+        //元素格式与颜色列表
+        var itemStyle = {
+            normal: {
+                opacity: 0.8,
+                shadowBlur: 20,
+                shadowOffsetX: 0,
+                shadowOffsetY: 0,
+                shadowColor: 'rgba(250, 235, 215, 0.8)'
+            },
+            emphasis:{
+                opacity:1,
+                shadowBlur:3,
+                shadowColor:'rgba(25,23,21,0.8)'
+            }
+        };
+        var colors=[
+        "#ffffff",
+        "#c23531",
+        "#2f4531",
+        "#61a0a8",
+        "#d48265",
+        "#749f83",
+        "#ca8622",
+        "#bda29a",
+        "#6e7074",
+        "#546570",
+        "#c4ccd3",
+        "#f05b72",
+        "#ef5b9c",
+        "#f47920",
+        "#905a3d",
+        "#fab27b",
+        "#2a5caa",
+        "#444693",
+        "#726930",
+        "#b2d235",
+        "#6d8346",
+        "#ac6767",
+        "#1d953f",
+        "#6950a1",
+        "#918597",
+
+        "#c23f31",
+        "#2f4531",
+        "#61a0a8",
+        "#d48265",
+        "#749f83",
+        "#ca8622",
+        "#bda29a",
+        "#6e7074",
+        "#546570",
+        "#c4ccd3",
+        "#f05b72",
+        "#ef5b9c",
+        "#f47920",
+        "#905a3d",
+        "#fab27b",
+        "#2a5caa",
+        "#444693",
+        "#726930",
+        "#b2d235",
+        "#6d8346",
+        "#ac6767",
+        "#1d953f",
+        "#6950a1",
+        "#918597",
+        "#ffffff"
+        ];
+        //情感信息图
+        document.chart=echarts.init(document.getElementById("chart-box"), 'rgba(255,255,255,0)', {renderer: 'canvas'});       
+        document.scaler={
+                name: '标尺',
+                type: 'scatter',
+                itemStyle:itemStyle,
+                label: {
+                    emphasis: {
+                        show: true,
+                        position: 'top',
+                        textStyle: {
+                            color: 'rgba(250,235,215,0.5)',
+                            fontSize: 16
+                        },
+                        formatter: function (obj) {
+                            var author=obj.value[3];
+                            return author;
+                        }
+                    }
+                },
+                symbolSize: function (val) {
+                    return val[2];
+                },
+                data: [
+                    [0,0,0,0,0,0,0,0]
+                ]
+            }
+        document.option= {
+            animation: true,
+            animationThreshold: 2000,
+            animationDuration: 1000,
+            animationEasing: "cubicOut",
+            animationDelay: 0,
+            animationDurationUpdate: 300,
+            animationEasingUpdate: "cubicOut",
+            animationDelayUpdate: 0,
+            title: {
+                //text: '',
+                sublink: '',
+                left: 'center'
+            },
+            tooltip: {
+                formatter: function (obj) {
+                    var topic=obj.seriesName;
+                    var author = obj.value[3];
+                    var content=obj.value[4];
+                    var attitudes=obj.value[7];
+                    var reposts=obj.value[5];
+                    var comments=obj.value[6];
+                    console.log(content);
+                    //document.getElementById("cloud-box").innerText=content;
+                    return '<p>#'+topic+'#'+
+                    '@'+author+'</p>'+
+                    '<p>赞同：'+attitudes+'</p>'+
+                    '<p>评论：'+comments+'</p>'+
+                    '<p>转发：'+reposts+'</p>';
+                }
+            },
+            legend: {
+                data: [],
+                left:"center",
+                textStyle: {
+                        color: 'rgba(250,235,215,0.8)',
+                        fontSize:20
+                },
+                tooltip:{
+                    show:true
+                },
+                formatter:function(obj){
+                    //console.log(obj);
+                    return '';
+                },
+                itemWidth:20,
+                itemHeight:20,
+                top:10,
+                itemGap:10,
+            },
+            color:["white"],//colors,
+            xAxis: {
+                name:"积极度",
+                nameTextStyle: {
+                    color: 'rgba(250,235,215,0.8)',
+                    fontSize: 10
+                },
+                type: 'value',
+                splitLine: {
+                    lineStyle: {
+                        type: 'dashed'
+                    }
+                },
+                axisLabel: {
+                    show: true,
+                    textStyle: {
+                        color: 'rgba(250,235,215,0.8)'
+                    }
+                },
+                splitNumber: 20
+            },
+            yAxis: {
+                name:"",
+                type: 'value',
+                splitLine: {
+                    lineStyle: {
+                        type: 'dashed'
+                    }
+                },
+                axisLabel: {
+                    show: true,
+                    textStyle: {
+                        color: 'rgba(250,235,215,0.8)'
+                    }
+                }
+            },
+            series: [document.scaler]
+        };
+        document.chart.setOption(document.option,true);
+        //词云图
+        document.cloud=echarts.init(document.getElementById("cloud-box"), 'rgba(255,255,255,0)', {renderer: 'canvas'});
+        document.cloudoption={
+            animation: true,
+            animationThreshold: 200,
+            animationDuration: 100,
+            animationEasing: "cubicOut",
+            animationDelay: 0,
+            animationDurationUpdate: 30,
+            animationEasingUpdate: "cubicOut",
+            animationDelayUpdate: 0,
+            color:colors,
+            series: [],
+            legend: [
+                {
+                    data: [],
+                    selected: {}
+                }
+            ],
+            tooltip: {
+                show: true,
+                trigger: "item",
+                triggerOn: "mousemove|click",
+                axisPointer: {
+                    type: "line"
+                },
+                textStyle: {
+                    fontSize: 14
+                },
+                borderWidth: 0
+            }
+        }
+        document.cloud.setOption(document.cloudoption,true);
+        </script>
+    </body>
+</html>
