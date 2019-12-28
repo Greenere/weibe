@@ -212,13 +212,13 @@ def main():
                     hotrank:dict=fetchHotRankLocal(hour)
                 for rank in range(50):
                     print('FETCHING-RANK: ',rank)
-                    topic=hotrank['rank'][str(rank)]
                     maxtry_topic:int=10
                     while True:
                         if maxtry_topic < 1:
                             print('TOPIC-WEIBO-FETCH-MAXTRY-EXCEEDED')
                             break
                         try:
+                            topic=hotrank['rank'][str(rank)]
                             fetchTopic(topic, rank,scrollnum=scrollNum, hour=hour)
                             break
                         except:
