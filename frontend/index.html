@@ -462,14 +462,6 @@
         }
         //情感信息展示
         function presentEmotion(){
-            //清除情感图
-            document.option=document.chart.getOption();
-            document.option.series=[document.scaler];
-            document.chart.setOption(document.option,true);
-            //清除词云图
-            document.cloudoption=document.cloud.getOption();
-            document.cloudoption.series=[];
-            document.cloud.setOption(document.cloudoption,true);
             //获取话题
             allModing();
             fetchTopics();
@@ -484,6 +476,15 @@
                     "example":example
                 },
                 messageHandler=function(result){
+                    //清除情感图
+                    document.option=document.chart.getOption();
+                    document.option.series=[document.scaler];
+                    //document.chart.setOption(document.option,true);
+                    //清除词云图
+                    document.cloudoption=document.cloud.getOption();
+                    document.cloudoption.series=[];
+                    document.cloud.setOption(document.cloudoption,true);
+
                     var response=result;
                     var ranks=response['ranks'];
                     var cloudseries=response['cloudseries'];
