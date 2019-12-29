@@ -16,15 +16,19 @@ cloudseries:list=[]
 
 exampleHour:int=27
 
+client = pymongo.MongoClient('mongodb://localhost:27017/')
+
 def fetchHotRankLocal(hour:int=time.localtime().tm_hour) -> dict:
-    client = pymongo.MongoClient('mongodb://localhost:27017/')
+    global client
+    #client = pymongo.MongoClient('mongodb://localhost:27017/')
     db = client['weiboHotRanks']
     col = db[str(hour)+'#rank']
     rank=col.find_one()
     return rank
 
 def fetchTopicLocal(rank,hour:int=time.localtime().tm_hour) -> dict:
-    client = pymongo.MongoClient('mongodb://localhost:27017/')
+    global client
+    #client = pymongo.MongoClient('mongodb://localhost:27017/')
     db = client['weiboTopics']
     col = db[str(hour) + '#'+str(rank)]
     topic=col.find_one()
@@ -152,10 +156,7 @@ def dataServe():
                 response['ready'][rank]=0
                 continue
             weibes:list = weibos['cards']
-            if len(weibes) < 1:
-                response['ready'][rank] = 0
-            else:
-                response['ready'][rank] = 1
+            response['ready'][rank] = 0 if len(weibes) <1 else 1
             reps:list = []
             for weibe in weibes:
                 rep = {
