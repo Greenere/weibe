@@ -1,3 +1,6 @@
+
+#纯粹为测试使用
+
 from PIL import Image
 from wordcloud import WordCloud, ImageColorGenerator
 import matplotlib.pyplot as plt
