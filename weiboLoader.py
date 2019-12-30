@@ -46,7 +46,7 @@ def log(logger, info):
 def getBrowser():
     chrome_options = Options()
     chrome_options.add_argument('--headless')
-    browser = webdriver.Chrome()  # chrome_options=chrome_options)
+    browser = webdriver.Chrome(chrome_options=chrome_options)
     browser.set_window_size(500, 700)
     wait = WebDriverWait(browser, 10)
     return wait,browser
