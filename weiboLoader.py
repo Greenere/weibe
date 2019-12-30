@@ -43,17 +43,29 @@ def getLogger(filename='weiboloader.log'):
 def log(logger, info):
     logger.info(info)
 
-def hotRank(wait,browser,logger,hour:int=time.localtime().tm_hour) -> dict:
+def getBrowser():
+    chrome_options = Options()
+    chrome_options.add_argument('--headless')
+    browser = webdriver.Chrome()  # chrome_options=chrome_options)
+    browser.set_window_size(500, 700)
+    wait = WebDriverWait(browser, 10)
+    return wait,browser
+
+def reachWeibo(wait,browser,logger):
     browser.get('https://m.weibo.cn/')
     wait.until(
-        EC.presence_of_element_located((By.CSS_SELECTOR,'.m-font-search'))
+        EC.presence_of_element_located((By.CSS_SELECTOR, '.m-font-search'))
     )
     log(logger, 'REACH WEIBO')
-    search=browser.find_element_by_css_selector('.m-font-search')
+    search = browser.find_element_by_css_selector('.m-font-search')
+    #time.sleep(random.randint(1,2))
     search.click()
     wait.until(
-        EC.element_to_be_clickable((By.CSS_SELECTOR,'.m-text-cut'))
+        EC.presence_of_element_located((By.CSS_SELECTOR, 'input'))
     )
+
+def hotRank(wait,browser,logger,hour:int=time.localtime().tm_hour) -> dict:
+    reachWeibo(wait,browser,logger)
     hotsearchs=browser.find_elements_by_css_selector('.m-text-cut')
     i=0
     for hotsearch in hotsearchs:
@@ -85,18 +97,12 @@ def hotRank(wait,browser,logger,hour:int=time.localtime().tm_hour) -> dict:
 
 def fetchTopic(wait,browser,logger,topic:str,rank:int=0,scrollnum:int=20,hour:int=time.localtime().tm_hour) -> dict:
     stf=time.time()
-    browser.get('https://m.weibo.cn/')
-    wait.until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, '.m-font-search'))
-    )
-    log(logger, 'REACH WEIBO')
-    search = browser.find_element_by_css_selector('.m-font-search')
-    search.click()
-    wait.until(
-        EC.presence_of_element_located((By.CSS_SELECTOR,'input'))
-    )
+    #!!!此时浏览器已经打开可以搜索的微博页面
+    browser.execute_script('window.scrollTo(0,0)')
     searchInput=browser.find_element_by_tag_name('input')
+    searchInput.clear()
     searchInput.send_keys('#'+topic+'#')
+    time.sleep(random.randint(1,2))
     searchInput.send_keys(Keys.ENTER)
     wait.until(
         EC.presence_of_element_located((By.CSS_SELECTOR,'.m-box'))
@@ -203,10 +209,10 @@ def mainHotRank(wait,browser,mainlog,hourlog,hour) -> dict:
     succeeded:bool=False
     for i in range(maxtry_rank):
         try:
-            hotrank:dict=hotRank(wait=wait,
-                                 browser=browser,
-                                 logger=hourlog,
-                                 hour=hour)
+            hotRank(wait=wait,
+                    browser=browser,
+                    logger=hourlog,
+                    hour=hour)
             succeeded=True
             break
         except:
@@ -220,6 +226,8 @@ def mainHotRank(wait,browser,mainlog,hourlog,hour) -> dict:
 
 def mainTopic(wait,browser,hotrank,mainlog,hourlog,hour):
     global scrollNum
+
+    reachWeibo(wait, browser, hourlog)
     for rank in range(50):
         log(mainlog, 'FETCHING-RANK: ' + str(rank))
         maxtry_topic: int = 3
@@ -239,15 +247,20 @@ def mainTopic(wait,browser,hotrank,mainlog,hourlog,hour):
                            scrollnum=scrollNum,
                            hour=hour)
                 succeeded=True
+
+                gc.collect()
+
                 break
             except:
                 log(mainlog, 'FAILURE-FETCH-TOPIC LEFT: ' + str(maxtry_topic-i-1))
-                time.sleep(2)
-
-        gc.collect()
+                #time.sleep(2)
+                browser.close()
+                wait,browser=getBrowser()
+                reachWeibo(wait,browser,hourlog)
 
         if not succeeded:
             log(mainlog, 'TOPIC-WEIBO-FETCH-MAXTRY-EXCEEDED')
+    return browser
 
 def main():
     mainlogname='./logs/weiboloader.log'
@@ -269,24 +282,20 @@ def main():
             hourlog=getLogger(filename=hourlogname)
             st=time.time()
 
-            chrome_options = Options()
-            chrome_options.add_argument('--headless')
-            browser = webdriver.Chrome(chrome_options=chrome_options)
-            browser.set_window_size(500, 700)
-            wait = WebDriverWait(browser, 10)
+            wait,browser=getBrowser()
 
             log(mainlog,'BROWSER AND CLIENT INITIATED')
 
-            mainTopic(wait=wait,
-                      browser=browser,
-                      hotrank=mainHotRank(wait=wait,
-                                          browser=browser,
-                                          mainlog=mainlog,
-                                          hourlog=hourlog,
-                                          hour=hour),
-                      mainlog=mainlog,
-                      hourlog=hourlog,
-                      hour=hour)
+            browser=mainTopic(wait=wait,
+                              browser=browser,
+                              hotrank=mainHotRank(wait=wait,
+                                                  browser=browser,
+                                                  mainlog=mainlog,
+                                                  hourlog=hourlog,
+                                                  hour=hour),
+                              mainlog=mainlog,
+                              hourlog=hourlog,
+                              hour=hour)
 
             et=time.time()
             log(mainlog,'FETCH-HOUR: '+str(hour)+' TIME-USED: '+str(et-st)+'s')
