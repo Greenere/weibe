@@ -101,6 +101,7 @@ def dataServe():
     elif reqs['require'] == 'topic':
         st=time.time()
         #解析请求
+        allMode:int=int(reqs['allmode'])
         checkStatus:list = list(reqs['checkstatus'])
         ranks:list = [i for i,check in zip(range(50), checkStatus) if check==1]
         log(servelog,'RANKS REQUESTED: '+str(ranks))
@@ -132,7 +133,7 @@ def dataServe():
             reps:list = [
                 {
                     'author': weibe['author'],
-                    'content': '',  # weibe['content'],
+                    #'content': '',  # weibe['content'],
                     'positive': weibe['positive'],
                     'reposts': weibe['reposts'],
                     'comments': weibe['comments'],
@@ -140,7 +141,7 @@ def dataServe():
                     'size': int(math.log(float(weibe['reposts']) + 1)),
                     'y': math.log(float(weibe['attitudes']) + 1),
                     'x': weibe['positive']
-                } for weibe in weibos['cards']
+                } for weibe in weibos['cards'] if not (allMode==1 and int(math.log(float(weibe['reposts']) + 1))<1)
             ]
             response[str(rank)] = reps
         response['ranks'] = ranks

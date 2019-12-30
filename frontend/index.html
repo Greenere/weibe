@@ -425,6 +425,7 @@
                 reqs={
                     "require":"topic",
                     "checkstatus":document.checkStatus,
+                    "allmode":allMode,
                     //"hotrank":document.hotrank,
                     "example":example
                 },
@@ -444,7 +445,7 @@
                     for(rk in ranks){
                         rank=ranks[rk];
                         if (response['ready'][rank]==0){
-                            console.log(document.hotrank[rank]+' NOT READY');
+                            //console.log(document.hotrank[rank]+' NOT READY');
                             setHotInfo('#'+document.hotrank[rank]+'#'+'暂未获取完成');
                             var indexId=rank-(index-1)*10;
                             if(indexId<10 && indexId>-1){
@@ -460,9 +461,9 @@
                             point=[
                                 Number(rep['x']),
                                 Number(rep['y']),
-                                Number(rep['size'])+1-allMode,
+                                Number(rep['size'])+1,
                                 rep["author"],
-                                rep["content"],
+                                '',//rep["content"],
                                 rep["reposts"],
                                 rep["comments"],
                                 rep["attitudes"]
@@ -534,7 +535,7 @@
                     document.cloud.setOption(document.cloudoption,true);
                     document.cloudoption.series=cloudseries;
                     document.cloud.setOption(document.cloudoption,true);
-                    setHotInfo("词云数据已经获取");
+                    setHotInfo("词云数据已更新");
                 },
                 errorHandler=function(){
                     setHotInfo("请求出现错误...");
@@ -543,7 +544,7 @@
             )
         }
         fetchHotRank();
-        setindexSign();
+        //setindexSign();
         </script>
     </head>
     <body>
@@ -613,7 +614,6 @@
             hotMain.append(hotBlock);
         }
         </script>
-       
         <script type="text/javascript">
         //元素格式与颜色列表
         var itemStyle = {
@@ -732,7 +732,7 @@
                     var attitudes=obj.value[7];
                     var reposts=obj.value[5];
                     var comments=obj.value[6];
-                    console.log(content);
+                    //console.log(content);
                     //document.getElementById("cloud-box").innerText=content;
                     return '<p>#'+topic+'#'+
                     '@'+author+'</p>'+
