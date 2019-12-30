@@ -28,7 +28,7 @@ except:
 
 from snownlp import SnowNLP
 
-scrollNum:int=10
+scrollNum:int=0
 
 def getLogger(filename='weiboloader.log'):
     logger = Logger(filename.split('.')[0])
@@ -281,12 +281,13 @@ def main():
             hourlogname='./logs/hourlogs/hour'+str(hour)+'.log'
             hourlog=getLogger(filename=hourlogname)
             st=time.time()
-
-            wait,browser=getBrowser()
-
+            try:
+                wait,browser=getBrowser()
+            except:
+                continue
             log(mainlog,'BROWSER AND CLIENT INITIATED')
-
-            browser=mainTopic(wait=wait,
+            try:
+                browser=mainTopic(wait=wait,
                               browser=browser,
                               hotrank=mainHotRank(wait=wait,
                                                   browser=browser,
@@ -296,12 +297,16 @@ def main():
                               mainlog=mainlog,
                               hourlog=hourlog,
                               hour=hour)
-
+            except:
+                continue
             et=time.time()
             log(mainlog,'FETCH-HOUR: '+str(hour)+' TIME-USED: '+str(et-st)+'s')
             fetched[hour]=1
             fetchcount+=1
-            browser.close()
+            try:
+                browser.close()
+            except:
+                pass
         else:
             min:int=time.localtime().tm_min
             log(mainlog,'READY TO SLEEP FOR: '+str(60-min)+' min')
