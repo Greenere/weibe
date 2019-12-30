@@ -10,6 +10,7 @@ import json
 import pymongo
 import random
 import jieba
+import gc
 
 from logging import INFO
 from logging import Formatter
@@ -27,14 +28,6 @@ from snownlp import SnowNLP
 
 scrollNum:int=10
 
-chrome_options = Options()
-chrome_options.add_argument('--headless')
-browser = webdriver.Chrome(chrome_options=chrome_options)
-browser.set_window_size(500, 700)
-wait = WebDriverWait(browser, 10)
-
-client=pymongo.MongoClient('mongodb://localhost:27017/')
-
 def getLogger(filename='weiboloader.log'):
     logger = Logger(filename.split('.')[0])
     logger.setLevel(level=INFO)
@@ -48,10 +41,7 @@ def getLogger(filename='weiboloader.log'):
 def log(logger, info):
     logger.info(info)
 
-def hotRank(logger,hour:int=time.localtime().tm_hour) -> dict:
-    global browser
-    global wait
-
+def hotRank(client,wait,browser,logger,hour:int=time.localtime().tm_hour) -> dict:
     browser.get('https://m.weibo.cn/')
     wait.until(
         EC.presence_of_element_located((By.CSS_SELECTOR,'.m-font-search'))
@@ -84,15 +74,12 @@ def hotRank(logger,hour:int=time.localtime().tm_hour) -> dict:
     hot['hour']=hour
     log(logger, 'HOT RANK PARSED')
     colname:str=str(hour)+'#rank'
-    mongoClear('weiboHotRanks',colname)
-    mongoSave(hot,'weiboHotRanks',colname)
+    mongoClear(client,'weiboHotRanks',colname)
+    mongoSave(client,hot,'weiboHotRanks',colname)
     log(logger, 'HOT RANK SAVED TO MONGODB')
     return hot
 
-def fetchTopic(logger,topic:str,rank:int=0,scrollnum:int=20,hour:int=time.localtime().tm_hour) -> dict:
-    global browser
-    global wait
-
+def fetchTopic(client,wait,browser,logger,topic:str,rank:int=0,scrollnum:int=20,hour:int=time.localtime().tm_hour) -> dict:
     stf=time.time()
     browser.get('https://m.weibo.cn/')
     wait.until(
@@ -124,7 +111,7 @@ def fetchTopic(logger,topic:str,rank:int=0,scrollnum:int=20,hour:int=time.localt
     i:int=0
     for card in cardList:
         try:
-            c = {}
+            c:dict = {}
             c['topic']=topic
             c['author'] = card.find_element_by_css_selector('.weibo-top .m-text-cut').text
             c['content'] = card.find_element_by_css_selector('.weibo-main .weibo-text').text
@@ -138,7 +125,7 @@ def fetchTopic(logger,topic:str,rank:int=0,scrollnum:int=20,hour:int=time.localt
             cards.append(c)
             log(logger,'PARSED: '+str(i)+' POSITIVE: '+str(positive))
             i+=1
-            words.extend(list(jieba.cut(c['content'])))
+            words.extend(jieba.cut(c['content']))
         except:
             log(logger,'PARSE ERROR: '+str(i))
             i+=1
@@ -148,8 +135,8 @@ def fetchTopic(logger,topic:str,rank:int=0,scrollnum:int=20,hour:int=time.localt
     weibos['topic']=topic
     weibos['words']=words
     colname:str=str(hour)+'#'+str(rank)
-    mongoClear('weiboTopics',colname)
-    mongoSave(weibos,'weiboTopics',colname)
+    mongoClear(client,'weiboTopics',colname)
+    mongoSave(client,weibos,'weiboTopics',colname)
     etf=time.time()
     log(logger,'TOPIC: #'+topic+'# FETCHED TIME-USED: '+str(etf-stf))
     return weibos
@@ -164,8 +151,7 @@ def calculatePositive(content):
             positive: float = 0.5
     return positive
 
-def mongoSave(content,dbname:str,colname:str):
-    global client
+def mongoSave(client,content,dbname:str,colname:str):
     #client=pymongo.MongoClient('mongodb://localhost:27017/')
     db=client[dbname]
     col=db[colname]
@@ -175,16 +161,14 @@ def mongoSave(content,dbname:str,colname:str):
         col.insert_many(content)
     #client.close()
 
-def mongoClear(dbname:str,colname:str):
-    global client
+def mongoClear(client,dbname:str,colname:str):
     #client = pymongo.MongoClient('mongodb://localhost:27017/')
     db = client[dbname]
     col = db[colname]
     col.drop()
     #client.close()
 
-def fetchHotRankLocal(hour:int=time.localtime().tm_hour) -> dict:
-    global client
+def fetchHotRankLocal(client,hour:int=time.localtime().tm_hour) -> dict:
     #client = pymongo.MongoClient('mongodb://localhost:27017/')
     db = client['weiboHotRanks']
     col = db[str(hour)+'#rank']
@@ -206,13 +190,17 @@ def parseCtrls(text:str) -> str:
         return str(float(text.split('万')[0])*10000)
     return text
 
-def mainHotRank(mainlog,hourlog,hour) -> dict:
+def mainHotRank(client,wait,browser,mainlog,hourlog,hour) -> dict:
     log(mainlog, 'HOT-RANK NOT THERE YET HOUR: ' + str(hour))
     maxtry_rank: int = 3
     succeeded:bool=False
     for i in range(maxtry_rank):
         try:
-            hotRank(logger=hourlog, hour=hour)
+            hotRank(client=client,
+                    wait=wait,
+                    browser=browser,
+                    logger=hourlog,
+                    hour=hour)
             succeeded=True
             break
         except:
@@ -221,25 +209,39 @@ def mainHotRank(mainlog,hourlog,hour) -> dict:
             continue
     if not succeeded:
         log(mainlog, 'HOT-RANK-FETCH-MAXTRY-EXCEEDED')
-    hotrank: dict = fetchHotRankLocal(hour)
+    hotrank: dict = fetchHotRankLocal(client,hour)
     return hotrank
 
-def mainTopic(hotrank,mainlog,hourlog,hour):
+def mainTopic(client,wait,browser,hotrank,mainlog,hourlog,hour):
     global scrollNum
 
     for rank in range(50):
         log(mainlog, 'FETCHING-RANK: ' + str(rank))
         maxtry_topic: int = 3
         succeeded:bool=False
+        currenthour:int=time.localtime().tm_hour
+        if currenthour!=hour:
+            log(mainlog,'HOUR EXCEEDED - TIME FOR NEXT HOUR')
+            break
         for i in range(maxtry_topic):
             try:
                 topic = hotrank['rank'][str(rank)]
-                fetchTopic(logger=hourlog, topic=topic, rank=rank, scrollnum=scrollNum, hour=hour)
+                fetchTopic(client=client,
+                           wait=wait,
+                           browser=browser,
+                           logger=hourlog,
+                           topic=topic,
+                           rank=rank,
+                           scrollnum=scrollNum,
+                           hour=hour)
                 succeeded=True
                 break
             except:
                 log(mainlog, 'FAILURE-FETCH-TOPIC LEFT: ' + str(maxtry_topic-i-1))
                 time.sleep(2)
+
+        gc.collect()
+
         if not succeeded:
             log(mainlog, 'TOPIC-WEIBO-FETCH-MAXTRY-EXCEEDED')
 
@@ -264,15 +266,42 @@ def main():
             hourlog=getLogger(filename=hourlogname)
             st=time.time()
 
-            mainTopic(mainHotRank(mainlog,hourlog,hour),mainlog,hourlog,hour)
+            chrome_options = Options()
+            chrome_options.add_argument('--headless')
+            browser = webdriver.Chrome(chrome_options=chrome_options)
+            browser.set_window_size(500, 700)
+            wait = WebDriverWait(browser, 10)
+
+            client = pymongo.MongoClient('mongodb://localhost:27017/')
+
+            log(mainlog,'BROWSER AND CLIENT INITIATED')
+
+            mainTopic(client=client,
+                      wait=wait,
+                      browser=browser,
+                      hotrank=mainHotRank(client=client,
+                                          wait=wait,
+                                          browser=browser,
+                                          mainlog=mainlog,
+                                          hourlog=hourlog,
+                                          hour=hour),
+                      mainlog=mainlog,
+                      hourlog=hourlog,
+                      hour=hour)
 
             et=time.time()
             log(mainlog,'FETCH-HOUR: '+str(hour)+' TIME-USED: '+str(et-st)+'s')
             fetched[hour]=1
             fetchcount+=1
+
+            client.close()
+            browser.close()
         else:
             min:int=time.localtime().tm_min
             log(mainlog,'READY TO SLEEP FOR: '+str(60-min)+' min')
+
+            gc.collect()
+
             time.sleep((60-min)*60)
             log(mainlog,'WAKE UP!')
 

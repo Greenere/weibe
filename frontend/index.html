@@ -389,6 +389,7 @@
                 document.checkStatus[hotId]=1;
                 setHotCheck(hotBlock,hotId);
             }
+            setHotInfo("正在获取选定的话题数据···");
             presentEmotion();
         }
         //全选
@@ -403,6 +404,7 @@
                 var hotBlock=document.getElementById("hot"+i);
                 setHotCheck(hotBlock,hotId);
             }
+            setHotInfo("正在获取选定的话题数据···");
             presentEmotion();
         }
         //本页取消
@@ -437,6 +439,7 @@
             var hotBlock=document.getElementById(targetId);
             document.checkStatus[hotId]=1-document.checkStatus[hotId];
             setHotCheck(hotBlock,hotId);
+            setHotInfo("正在获取选定的话题数据···");
             presentEmotion();
         }
         //话题计数
@@ -484,6 +487,8 @@
                     document.cloudoption=document.cloud.getOption();
                     document.cloudoption.series=[];
                     document.cloud.setOption(document.cloudoption,true);
+
+                    setHotInfo("数据已经获取");
 
                     var response=result;
                     var ranks=response['ranks'];

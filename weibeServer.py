@@ -7,12 +7,14 @@ import time
 import math
 import os
 import threading
+import gc
 
 from weiboLoader import getLogger,log
 
 #词云信号量
 clouded:int=0
 cloudseries:list=[]
+discardwords:list=['#', '【', '】', ',', '，', '##','的','是','了','在']
 
 exampleHour:int=27
 
@@ -47,15 +49,9 @@ def setWordCloud(ranks:list,hour:int) -> list:
                 words.extend(weibos['words'])
             except:
                 pass
-        textdict:dict = {}
-        for wd in words:
-            if wd in ['#', '【', '】', ',', '，', '##']:
-                continue
-            try:
-                textdict[wd] += 1
-            except:
-                textdict[wd] = 1
-        wordpair:list =list(textdict.items())
+        wordpair:list=[]
+        for wd in set(words)-set(discardwords):
+            wordpair.append((wd,words.count(wd)))
         wordpair.sort(key=lambda i:i[1],reverse=True)
         wc.add("", wordpair, word_size_range=[10, 100], rotate_step=1, word_gap=20)
         options = wc.get_options()
@@ -92,9 +88,18 @@ def aboutPage():
     return send_file(filename)
 
 @app.route('/data',methods=['GET'])
+def dataServeAttemp():
+    try:
+        return dataServe()
+    except:
+        log(servelog,'DATA SERVE ERROR')
+        return {}
+
 def dataServe():
     global clouded
     global cloudseries
+
+    gc.collect()
 
     reqs=request.args.get('request')
     log(servelog,'REQUEST RECIEVED: '+str(reqs))
