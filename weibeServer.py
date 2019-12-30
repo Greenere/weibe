@@ -150,8 +150,8 @@ def dataServe():
         return jsonify(response)
     elif reqs['require']=='wordcloud':
         ranks: list = list(reqs['ranks'])
-        ready: list=list(reqs['ready'])
-        readyranks:list=[rank for rank in ranks if ready[rank]]
+        ready: dict = dict(reqs['ready'])
+        readyranks:list=[rank for rank in ranks if ready[str(rank)]]
         log(servelog, 'WAITING FOR WORD CLOUDING')
         response: dict = {'cloudseries':setWordCloud(readyranks, hour)}
         log(servelog, 'WORD CLOUDING FINISHED')
