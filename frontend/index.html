@@ -430,7 +430,7 @@
                 },
                 messageHandler=function(response){
                     setHotInfo("情感数据已经获取，正在获取词云···");
-                    fetchWordCloud();
+                    fetchWordCloud(response['ready'],response['ranks']);
                     //清除情感图
                     document.option=document.chart.getOption();
                     document.option.series=[document.scaler];
@@ -518,11 +518,12 @@
                 }
             )
         }
-        function fetchWordCloud(){
+        function fetchWordCloud(ready,ranks){
             requestData(
                 reqs={
                     "require":"wordcloud",
-                    "checkstatus":document.checkStatus,
+                    "ranks":ranks,
+                    "ready":ready,
                     "example":example
                 },
                 messageHandler=function(response){
