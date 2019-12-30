@@ -174,7 +174,7 @@ def mongoClear(client,dbname:str,colname:str):
     col.drop()
     #client.close()
 
-def fetchHotRankLocal(client,hour:int=time.localtime().tm_hour) -> dict:
+def fetchHotRankLocal(hour:int=time.localtime().tm_hour) -> dict:
     client = pymongo.MongoClient('mongodb://localhost:27017/')
     db = client['weiboHotRanks']
     col = db[str(hour)+'#rank']
@@ -199,14 +199,14 @@ def parseCtrls(text:str) -> str:
 
 def mainHotRank(wait,browser,mainlog,hourlog,hour) -> dict:
     log(mainlog, 'HOT-RANK NOT THERE YET HOUR: ' + str(hour))
-    maxtry_rank: int = 3
+    maxtry_rank: int = 5
     succeeded:bool=False
     for i in range(maxtry_rank):
         try:
-            hotRank(wait=wait,
-                    browser=browser,
-                    logger=hourlog,
-                    hour=hour)
+            hotrank:dict=hotRank(wait=wait,
+                                 browser=browser,
+                                 logger=hourlog,
+                                 hour=hour)
             succeeded=True
             break
         except:
@@ -215,7 +215,7 @@ def mainHotRank(wait,browser,mainlog,hourlog,hour) -> dict:
             continue
     if not succeeded:
         log(mainlog, 'HOT-RANK-FETCH-MAXTRY-EXCEEDED')
-    hotrank: dict = fetchHotRankLocal(hour)
+    hotrank:dict=fetchHotRankLocal(hour)
     return hotrank
 
 def mainTopic(wait,browser,hotrank,mainlog,hourlog,hour):
