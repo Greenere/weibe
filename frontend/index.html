@@ -146,6 +146,7 @@
         var cloud=0;//词云
         var example=0;//示例模式
         var allMode=0;//全局模式
+        var disabled=0;
         var activeColor="rgba(250,235,215,0.8)";//活跃按钮颜色
         var dormantColor="rgba(250,235,215,0.2)";//休眠按钮颜色
         //热搜榜
@@ -163,121 +164,6 @@
             document.getElementById("hot-info").innerText=info;
             setTimeout(function(){clearHotInfo();},5000);
         }
-        //数据请求函数
-        function requestData(reqs,messageHandler,errorHandler){
-            var host='localhost';
-            //var host='193.112.33.19'
-            var port='8880';
-            $.ajax({
-                type : "GET",
-                contentType: "application/json;charset=UTF-8",
-                url : "http://"+host+":"+port+"/data",
-                data : {"request":JSON.stringify(reqs)},
-                success :function(result){
-                    messageHandler(result);
-                },
-                error : function(e){
-                    errorHandler();
-                }
-            });
-        }
-        //获取热搜榜
-        function fetchHotRank(newHot=false){
-            requestData(
-                reqs={
-                    "require":"hot-rank",
-                    "new":newHot,
-                    "example":example
-                },
-                messageHandler=function(result){
-                    var response=result;
-                    //console.log(response.rank);
-                    if (response.ready==1){
-                        document.hotrank=response.rank;
-                        setHotInfo("热搜榜已经获得");
-                        setindex();
-                    }else{
-                        document.hotrank=[];
-                        setHotInfo("热搜榜暂未获取");
-                        setindex();
-                    }
-                },
-                errorHandler=function(){
-                    setHotInfo("请求出现错误...");
-                }
-            )
-        }
-        fetchHotRank();
-        </script>
-    </head>
-    <body>
-        <div id='head' class="head">
-            <h1 id='weibe-title'>微情感 WEIBEMOTION</h1>
-        </div>
-        <div id='main'>
-            <div id="now-what">
-                <div id="now-head" class="head">
-                    <h2>微情感</h2>
-                </div>
-                <div id="now-ctrl" class="ctrl" onselectstart="return false">
-                    <b id="now-cloud" class="button" onclick="nowCloud(event);">
-                        ☁ 词云
-                    </b>  
-                    <b id="now-info"></b>
-                </div>
-                <div id="now-main" class="main">
-                    <div id="container">
-                        <div id="chart-box"></div>
-                        <div id="cloud-box"></div>
-                    </div>
-                </div>
-            </div>
-            <div id="hot-rank" onselectstart="return false">
-                <div id="hot-head" class="head">
-                    <h2>热搜榜</h2>
-                </div>
-                <div id="hot-ctrl" class="ctrl">
-                    <b id="hot-new" class="button" onclick="hotNew();" title="刷新">↻</b>  
-                    <b id="hot-prev" class="button" onclick="hotPrev();" title="上一页">◄</b>  
-                    <b id="hot-next" class="button" onclick="hotNext();" title="下一页">►</b>  
-                    <b id="hot-select-all" class="button" onclick="hotSelectAll();" title="全部选择">✔</b> 
-                    <b id="hot-cancel-all" class="button" onclick="hotCancelAll();" title="全部取消">✖</b>  
-                    <b id="hot-select" class="button" onclick="hotSelect();" title="本页全选">☰</b>   
-                    <b id="hot-cancel" class="button" onclick="hotCancel();" title="本页取消">☷</b>
-                    <b id="index1" onclick="hotIndex(event);">㊀</b>   
-                    <b id="index2" onclick="hotIndex(event);">㊁</b>   
-                    <b id="index3" onclick="hotIndex(event);">㊂</b>   
-                    <b id="index4" onclick="hotIndex(event);">㊃</b>   
-                    <b id="index5" onclick="hotIndex(event);">㊄</b>
-                    <b id="hot-info"></b>
-                </div>
-                <div id="hot-main" class="main">
-                </div>
-            </div>
-            <div id="side-tool" onselectstart="return false">
-                <div id="side-set-box" class="ctrl">
-                    <b id="side-about" class="button" title="关于···">
-                        <a href="about.html" target="_blank">🔠</a>
-                    </b>
-                    <b id="side-mode" class="button" title="示例数据" onclick="exampleMode(event);">
-                        🎦
-                    </b>
-                </div>
-            </div>
-        </div>
-        <script type="text/javascript">
-        //热搜榜页面初始化
-        var hotMain=document.getElementById('hot-main');
-        for(i=0;i<10;i++){
-            var id="hot"+i;
-            var hotBlock=document.createElement('div');
-            hotBlock.setAttribute("id",id);
-            hotBlock.setAttribute("class","hot_block");
-            hotBlock.setAttribute("onclick","hot(event);");
-            hotMain.append(hotBlock);
-        }
-        </script>
-        <script type="text/javascript">
         //设置页码标志
         function setindexSign(){
             document.getElementById('index'+index).style.setProperty("color",activeColor);
@@ -303,6 +189,70 @@
                 }
                 setHotCheck(hotBlock,hotId);
             };
+        }
+        //数据请求函数
+        function requestData(reqs,messageHandler,errorHandler){
+            var host='localhost';
+            //var host='193.112.33.19'
+            var port='8880';
+            $.ajax({
+                type : "GET",
+                contentType: "application/json;charset=UTF-8",
+                url : "http://"+host+":"+port+"/data",
+                data : {"request":JSON.stringify(reqs)},
+                success :function(result){
+                    messageHandler(result);
+                },
+                error : function(e){
+                    errorHandler();
+                }
+            });
+        }
+        //获取热搜榜
+        function fetchHotRank(newHot=false){
+            disabled=1;
+            requestData(
+                reqs={
+                    "require":"hot-rank",
+                    "new":newHot,
+                    "example":example
+                },
+                messageHandler=function(result){
+                    var response=result;
+                    //console.log(response.rank);
+                    if (response.ready==1){
+                        document.hotrank=response.rank;
+                        setHotInfo("热搜榜已经获得");
+                        setindex();
+                    }else{
+                        document.hotrank=[];
+                        setHotInfo("热搜榜暂未获取");
+                        setindex();
+                    }
+                    disabled=0;
+                },
+                errorHandler=function(){
+                    setHotInfo("请求出现错误...");
+                    disabled=0;
+                }
+            )
+        }
+        //示例模式按钮
+        function exampleMode(event){
+            var exampleButton=document.getElementById(event.target.id);
+            if (example==0){
+                exampleButton.innerText="🔛";
+                exampleButton.title="真实数据";
+                setHotInfo("示例模式已经打开");
+                hotCancelAll();
+            }else{
+                exampleButton.innerText="🎦";
+                exampleButton.title="示例模式";
+                setHotInfo("示例模式已经关闭");
+                hotCancelAll();
+            }
+            example=1-example;
+            fetchHotRank();
         }
         //页码点选
         function hotIndex(event){
@@ -330,6 +280,10 @@
         }
         //刷新
         function hotNew(){
+            if(disabled==1){
+                setHotInfo("数据正在请求中···");
+                return false;
+            }
             for(var i=0;i<50;i++){
                 if (document.checkStatus[i]==1){
                     //document.checkStatus[i]=0
@@ -364,25 +318,12 @@
             cloud=1-cloud;
             switchChart();
         }
-        //示例模式按钮
-        function exampleMode(event){
-            var exampleButton=document.getElementById(event.target.id);
-            if (example==0){
-                exampleButton.innerText="🔛";
-                exampleButton.title="真实数据";
-                setHotInfo("示例模式已经打开");
-                hotCancelAll();
-            }else{
-                exampleButton.innerText="🎦";
-                exampleButton.title="示例模式";
-                setHotInfo("示例模式已经关闭");
-                hotCancelAll();
-            }
-            example=1-example;
-            fetchHotRank();
-        }
         //本页全选
         function hotSelect(){
+            if(disabled==1){
+                setHotInfo("数据正在请求中···");
+                return false;
+            }
             for (var i=0;i<10;i++){
                 var hotId=i+(index-1)*10;
                 var hotBlock=document.getElementById("hot"+i);
@@ -394,6 +335,10 @@
         }
         //全选
         function hotSelectAll(){
+            if(disabled==1){
+                setHotInfo("数据正在请求中···");
+                return false;
+            }
             for(var i=0;i<50;i++){
                 if(document.checkStatus[i]==0){
                     document.checkStatus[i]=1;
@@ -434,6 +379,10 @@
         }
         //话题选择
         function hot(event){
+            if(disabled==1){
+                setHotInfo("数据正在请求中···");
+                return false;
+            }
             var targetId=event.target.id;
             var hotId=Number(targetId[3])+(index-1)*10;
             var hotBlock=document.getElementById(targetId);
@@ -471,6 +420,7 @@
         }
         //获取话题
         function fetchTopics(){
+            disabled=1;
             requestData(
                 reqs={
                     "require":"topic",
@@ -478,23 +428,14 @@
                     //"hotrank":document.hotrank,
                     "example":example
                 },
-                messageHandler=function(result){
+                messageHandler=function(response){
+                    setHotInfo("情感数据已经获取，正在获取词云···");
+                    fetchWordCloud();
                     //清除情感图
                     document.option=document.chart.getOption();
                     document.option.series=[document.scaler];
                     //document.chart.setOption(document.option,true);
-                    //清除词云图
-                    document.cloudoption=document.cloud.getOption();
-                    document.cloudoption.series=[];
-                    document.cloud.setOption(document.cloudoption,true);
-
-                    setHotInfo("数据已经获取");
-
-                    var response=result;
                     var ranks=response['ranks'];
-                    var cloudseries=response['cloudseries'];
-                    document.cloudoption.series=cloudseries;
-                    document.cloud.setOption(document.cloudoption,true);
                     //console.log(ranks);
                     //console.log(response);
                     //document.option.color=['white'];
@@ -568,6 +509,31 @@
                         //document.option.color.push(colors[rank+1]);
                     }
                     document.chart.setOption(document.option,true);
+                    disabled=0;
+                },
+                errorHandler=function(){
+                    setHotInfo("请求出现错误...");
+                    disabled=0;
+                    //hotCancelAll();
+                }
+            )
+        }
+        function fetchWordCloud(){
+            requestData(
+                reqs={
+                    "require":"wordcloud",
+                    "checkstatus":document.checkStatus,
+                    "example":example
+                },
+                messageHandler=function(response){
+                    var cloudseries=response['cloudseries'];
+                    //清除词云图
+                    document.cloudoption=document.cloud.getOption();
+                    document.cloudoption.series=[];
+                    document.cloud.setOption(document.cloudoption,true);
+                    document.cloudoption.series=cloudseries;
+                    document.cloud.setOption(document.cloudoption,true);
+                    setHotInfo("词云数据已经获取");
                 },
                 errorHandler=function(){
                     setHotInfo("请求出现错误...");
@@ -575,8 +541,78 @@
                 }
             )
         }
+        fetchHotRank();
         setindexSign();
         </script>
+    </head>
+    <body>
+        <div id='head' class="head">
+            <h1 id='weibe-title'>微情感 WEIBEMOTION</h1>
+        </div>
+        <div id='main'>
+            <div id="now-what">
+                <div id="now-head" class="head">
+                    <h2>微情感</h2>
+                </div>
+                <div id="now-ctrl" class="ctrl" onselectstart="return false">
+                    <b id="now-cloud" class="button" onclick="nowCloud(event);">
+                        ☁ 词云
+                    </b>  
+                    <b id="now-info"></b>
+                </div>
+                <div id="now-main" class="main">
+                    <div id="container">
+                        <div id="chart-box"></div>
+                        <div id="cloud-box"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="hot-rank" onselectstart="return false">
+                <div id="hot-head" class="head">
+                    <h2>热搜榜</h2>
+                </div>
+                <div id="hot-ctrl" class="ctrl">
+                    <b id="hot-new" class="button" onclick="hotNew();" title="刷新">↻</b>  
+                    <b id="hot-prev" class="button" onclick="hotPrev();" title="上一页">◄</b>  
+                    <b id="hot-next" class="button" onclick="hotNext();" title="下一页">►</b>  
+                    <b id="hot-select-all" class="button" onclick="hotSelectAll();" title="全部选择">✔</b> 
+                    <b id="hot-cancel-all" class="button" onclick="hotCancelAll();" title="全部取消">✖</b>  
+                    <b id="hot-select" class="button" onclick="hotSelect();" title="本页全选">☰</b>   
+                    <b id="hot-cancel" class="button" onclick="hotCancel();" title="本页取消">☷</b>
+                    <b id="index1" onclick="hotIndex(event);">㊀</b>   
+                    <b id="index2" onclick="hotIndex(event);">㊁</b>   
+                    <b id="index3" onclick="hotIndex(event);">㊂</b>   
+                    <b id="index4" onclick="hotIndex(event);">㊃</b>   
+                    <b id="index5" onclick="hotIndex(event);">㊄</b>
+                    <b id="hot-info"></b>
+                </div>
+                <div id="hot-main" class="main">
+                </div>
+            </div>
+            <div id="side-tool" onselectstart="return false">
+                <div id="side-set-box" class="ctrl">
+                    <b id="side-about" class="button" title="关于···">
+                        <a href="about.html" target="_blank">🔠</a>
+                    </b>
+                    <b id="side-mode" class="button" title="示例数据" onclick="exampleMode(event);">
+                        🎦
+                    </b>
+                </div>
+            </div>
+        </div>
+        <script type="text/javascript">
+        //热搜榜页面初始化
+        var hotMain=document.getElementById('hot-main');
+        for(i=0;i<10;i++){
+            var id="hot"+i;
+            var hotBlock=document.createElement('div');
+            hotBlock.setAttribute("id",id);
+            hotBlock.setAttribute("class","hot_block");
+            hotBlock.setAttribute("onclick","hot(event);");
+            hotMain.append(hotBlock);
+        }
+        </script>
+       
         <script type="text/javascript">
         //元素格式与颜色列表
         var itemStyle = {
