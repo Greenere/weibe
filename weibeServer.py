@@ -1,6 +1,3 @@
-from flask import Flask, request,jsonify,send_from_directory,send_file
-from pyecharts.charts import WordCloud
-
 import json
 import pymongo
 import time
@@ -9,12 +6,14 @@ import os
 import threading
 import gc
 
+from flask import Flask, request,jsonify,send_from_directory,send_file
+from pyecharts.charts import WordCloud
 from weiboLoader import getLogger,log
 
-discardwords:list=['#', '【', '】', ',', '，', '##','的','是','了','在']
+discardwords:list=['#', '【', '】', ',', '，', '##','的','是','了','在'] #词云构建时的弃用词
+exampleHour:int=27 #示例小时（虚拟时间）
 
-exampleHour:int=27
-
+#从数据库获取热搜榜和相应话题的微博数据，外部传入client以便复用
 def fetchHotRankLocal(client,hour:int=time.localtime().tm_hour) -> dict:
     db = client['weiboHotRanks']
     col = db[str(hour)+'#rank']
@@ -27,8 +26,10 @@ def fetchTopicLocal(client,rank,hour:int=time.localtime().tm_hour) -> dict:
     topic=col.find_one()
     return topic
 
+#词云构建函数
 def setWordCloud(ranks:list,hour:int) -> list:
     try:
+        #获取词语列表
         client = pymongo.MongoClient('mongodb://localhost:27017/')
         wc = WordCloud()
         words:list = []
@@ -36,6 +37,7 @@ def setWordCloud(ranks:list,hour:int) -> list:
             weibos = fetchTopicLocal(client,rank, hour)
             words.extend(weibos['words'])
         client.close()
+        #词频统计
         textdict:dict={}
         for wd in words:
             if wd in discardwords:
@@ -51,6 +53,7 @@ def setWordCloud(ranks:list,hour:int) -> list:
         options['tooltip']['textStyle'] = {"fontSize": 14}
         series = options['series']
         series[0]['rotationRange'] = [-2, 2]
+        #在词语过多时只取前500项
         if len(series[0]['data'])>500:
             series[0]['data']=series[0]['data'][:500]
         cloudseries=series
@@ -60,6 +63,7 @@ def setWordCloud(ranks:list,hour:int) -> list:
 
 app = Flask(__name__)
 
+#服务日志
 servelog=getLogger('./logs/server.log')
 
 @app.route('/')
@@ -77,8 +81,10 @@ def aboutPage():
     filename='./frontend/about.html'
     return send_file(filename)
 
+#数据请求服务
 @app.route('/data',methods=['GET'])
 def dataServe():
+    #获取请求
     reqs=request.args.get('request')
     log(servelog,'REQUEST RECIEVED: '+str(reqs))
     reqs = json.loads(reqs)
@@ -130,10 +136,10 @@ def dataServe():
                 response['ready'][rank]=0
                 continue
             response['ready'][rank] = 0 if len(weibos['cards']) <1 else 1
+            #allMode为1时，放弃所有计算得到的记录点大小小于1的数据点
             reps:list = [
                 {
                     'author': weibe['author'],
-                    #'content': '',  # weibe['content'],
                     'positive': weibe['positive'],
                     'reposts': weibe['reposts'],
                     'comments': weibe['comments'],
@@ -150,9 +156,11 @@ def dataServe():
         client.close()
         return jsonify(response)
     elif reqs['require']=='wordcloud':
+        #获取应该用于生成词云的词语对应的话题的标号（即热搜榜排名）列表readyranks
         ranks: list = list(reqs['ranks'])
         ready: dict = dict(reqs['ready'])
         readyranks:list=[rank for rank in ranks if ready[str(rank)]]
+        #生成词云，构造回复
         log(servelog, 'WAITING FOR WORD CLOUDING')
         response: dict = {'cloudseries':setWordCloud(readyranks, hour)}
         log(servelog, 'WORD CLOUDING FINISHED')

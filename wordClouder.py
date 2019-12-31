@@ -1,6 +1,4 @@
-
-#纯粹为测试使用
-
+#本模块为测试模块，实际程序中并未调用
 from PIL import Image
 from wordcloud import WordCloud, ImageColorGenerator
 import matplotlib.pyplot as plt

@@ -3,7 +3,13 @@
   <component name="ChangeListManager">
     <list default="true" id="f22f90ef-e360-48e4-a671-faba0181ae8b" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/exampleSetter/mongoSaver.py" beforeDir="false" afterPath="$PROJECT_DIR$/exampleSetter/mongoSaver.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/about.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/about.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mongoReformer.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/weibeServer.py" beforeDir="false" afterPath="$PROJECT_DIR$/weibeServer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/weiboLoader.py" beforeDir="false" afterPath="$PROJECT_DIR$/weiboLoader.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/wordClouder.py" beforeDir="false" afterPath="$PROJECT_DIR$/wordClouder.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />

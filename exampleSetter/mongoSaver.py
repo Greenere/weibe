@@ -1,3 +1,5 @@
+#运行本程序可以将示例数据存入Mongodb数据库中
+
 import json
 import pymongo
 import time

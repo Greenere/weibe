@@ -190,53 +190,6 @@
                 setHotCheck(hotBlock,hotId);
             };
         }
-        //数据请求函数
-        function requestData(reqs,messageHandler,errorHandler){
-            var host='localhost';
-            //var host='193.112.33.19';
-            var port='8880';
-            $.ajax({
-                type : "GET",
-                contentType: "application/json;charset=UTF-8",
-                url : "http://"+host+":"+port+"/data",
-                data : {"request":JSON.stringify(reqs)},
-                success :function(result){
-                    messageHandler(result);
-                },
-                error : function(e){
-                    errorHandler();
-                }
-            });
-        }
-        //获取热搜榜
-        function fetchHotRank(newHot=false){
-            disabled=1;
-            requestData(
-                reqs={
-                    "require":"hot-rank",
-                    "new":newHot,
-                    "example":example
-                },
-                messageHandler=function(result){
-                    var response=result;
-                    //console.log(response.rank);
-                    if (response.ready==1){
-                        document.hotrank=response.rank;
-                        setHotInfo("热搜榜已经获得");
-                        setindex();
-                    }else{
-                        document.hotrank=[];
-                        setHotInfo("热搜榜暂未获取");
-                        setindex();
-                    }
-                    disabled=0;
-                },
-                errorHandler=function(){
-                    setHotInfo("请求出现错误...");
-                    disabled=0;
-                }
-            )
-        }
         //示例模式按钮
         function exampleMode(event){
             var exampleButton=document.getElementById(event.target.id);
@@ -418,6 +371,51 @@
             allModing();
             fetchTopics();
         }
+        //数据请求函数
+        function requestData(reqs,messageHandler,errorHandler){
+            var host='localhost';
+            //var host='193.112.33.19';
+            var port='8880';
+            $.ajax({
+                type : "GET",
+                contentType: "application/json;charset=UTF-8",
+                url : "http://"+host+":"+port+"/data",
+                data : {"request":JSON.stringify(reqs)},
+                success :function(result){
+                    messageHandler(result);
+                },
+                error : function(e){
+                    errorHandler();
+                }
+            });
+        }
+        //获取热搜榜
+        function fetchHotRank(newHot=false){
+            disabled=1;
+            requestData(
+                reqs={
+                    "require":"hot-rank",
+                    "new":newHot,
+                    "example":example
+                },
+                messageHandler=function(result){
+                    var response=result;
+                    if (response.ready==1){
+                        document.hotrank=response.rank;
+                        setHotInfo("热搜榜已经获得");
+                    }else{
+                        document.hotrank=[];
+                        setHotInfo("热搜榜暂未获取");
+                    }
+                    setindex();
+                    disabled=0;
+                },
+                errorHandler=function(){
+                    setHotInfo("请求出现错误...");
+                    disabled=0;
+                }
+            )
+        }
         //获取话题
         function fetchTopics(){
             disabled=1;
@@ -426,7 +424,6 @@
                     "require":"topic",
                     "checkstatus":document.checkStatus,
                     "allmode":allMode,
-                    //"hotrank":document.hotrank,
                     "example":example
                 },
                 messageHandler=function(response){
@@ -435,11 +432,7 @@
                     //清除情感图
                     document.option=document.chart.getOption();
                     document.option.series=[document.scaler];
-                    //document.chart.setOption(document.option,true);
                     var ranks=response['ranks'];
-                    //console.log(ranks);
-                    //console.log(response);
-                    //document.option.color=['white'];
                     document.option.legend[0].data=[];
                     document.option.color=['white'];
                     for(rk in ranks){
@@ -463,7 +456,6 @@
                                 Number(rep['y']),
                                 Number(rep['size'])+1,
                                 rep["author"],
-                                '',//rep["content"],
                                 rep["reposts"],
                                 rep["comments"],
                                 rep["attitudes"]
@@ -506,8 +498,6 @@
                         if (allMode==0){
                             document.option.legend[0].data.push(document.hotrank[rank]);
                         }
-                        //document.option.legend[0].data.push(document.hotrank[rank]);
-                        //document.option.color.push(colors[rank+1]);
                     }
                     document.chart.setOption(document.option,true);
                     disabled=0;
@@ -515,10 +505,10 @@
                 errorHandler=function(){
                     setHotInfo("请求出现错误...");
                     disabled=0;
-                    //hotCancelAll();
                 }
             )
         }
+        //获取词云
         function fetchWordCloud(ready,ranks){
             requestData(
                 reqs={
@@ -539,12 +529,10 @@
                 },
                 errorHandler=function(){
                     setHotInfo("请求出现错误...");
-                    //hotCancelAll();
                 }
             )
         }
         fetchHotRank();
-        //setindexSign();
         </script>
     </head>
     <body>
@@ -615,6 +603,7 @@
         }
         </script>
         <script type="text/javascript">
+        //初始化情感信息图与词云图
         //元素格式与颜色列表
         var itemStyle = {
             normal: {

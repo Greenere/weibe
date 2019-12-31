@@ -1,3 +1,5 @@
+#此程序仅用于操作数据库数据
+
 import pymongo
 import jieba
 
