@@ -304,14 +304,18 @@ def main():
                 continue
             log(mainlog,'BROWSER AND CLIENT INITIATED')
             #获取热搜榜，进入主话题循环
+            if currentRank==0:
+                hotrank=mainHotRank(wait=wait,
+                                    browser=browser,
+                                    mainlog=mainlog,
+                                    hourlog=hourlog,
+                                    hour=hour)
+            else:
+                hotrank=fetchHotRankLocal(hour=hour)
             try:
                 browser=mainTopic(wait=wait,
                                   browser=browser,
-                                  hotrank=mainHotRank(wait=wait,
-                                                      browser=browser,
-                                                      mainlog=mainlog,
-                                                      hourlog=hourlog,
-                                                      hour=hour),
+                                  hotrank=hotrank,
                                   mainlog=mainlog,
                                   hourlog=hourlog,
                                   hour=hour)
