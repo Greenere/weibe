@@ -304,14 +304,11 @@ def main():
                 continue
             log(mainlog,'BROWSER AND CLIENT INITIATED')
             #获取热搜榜，进入主话题循环
-            if currentRank==0:
-                hotrank=mainHotRank(wait=wait,
-                                    browser=browser,
-                                    mainlog=mainlog,
-                                    hourlog=hourlog,
-                                    hour=hour)
-            else:
-                hotrank=fetchHotRankLocal(hour=hour)
+            hotrank=mainHotRank(wait=wait,
+                                browser=browser,
+                                mainlog=mainlog,
+                                hourlog=hourlog,
+                                hour=hour)
             try:
                 browser=mainTopic(wait=wait,
                                   browser=browser,
@@ -320,7 +317,8 @@ def main():
                                   hourlog=hourlog,
                                   hour=hour)
             except:
-                continue
+                if currentRank<49:
+                    continue
             et=time.time()
             log(mainlog,'FETCH-HOUR: '+str(hour)+' TIME-USED: '+str(et-st)+'s')
             fetched[hour]=1
