@@ -63,6 +63,10 @@ def setWordCloud(ranks:list,hour:int) -> list:
         cloudseries=[]
     return cloudseries
 
+if not crawling:
+    Thread(target=main,args=(False,),name='weibeloader').start()
+    crawling=True
+
 app = Flask(__name__)
 
 #服务日志
@@ -70,11 +74,6 @@ servelog=getLogger('./logs/server.log')
 
 @app.route('/')
 def index():
-    global crawling
-    
-    if not crawling:
-        Thread(target=main,args=(True,)).start()
-        crawling=True
     filename='./frontend/index.html'
     return send_file(filename)
 

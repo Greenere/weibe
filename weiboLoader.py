@@ -261,7 +261,6 @@ def mainTopic(wait,browser,hotrank:dict,mainlog:Logger,hourlog:Logger,hour:int):
                            hour=hour)
                 succeeded=True
                 currentRank=rank
-                gc.collect()
                 break
             except:
                 log(mainlog, 'FAILURE-FETCH-TOPIC LEFT: ' + str(maxtry_topic-i-1)+' CURRENT-RANK: '+str(currentRank))
@@ -271,7 +270,6 @@ def mainTopic(wait,browser,hotrank:dict,mainlog:Logger,hourlog:Logger,hour:int):
                 reachWeibo(wait,browser,hourlog)
         if not succeeded:
             log(mainlog, 'TOPIC-WEIBO-FETCH-MAXTRY-EXCEEDED')
-        time.sleep(2)
     return browser
 
 #主函数
