@@ -26,8 +26,8 @@ try:
 except:
     print('ANALYSIS NOT IMPORTED')
 
-scrollNum:int=0
-currentRank:int=0
+scrollNum:int=0 #滚动次数，控制获取的微博数目
+currentRank:int=0 #当前话题排序号，用于异常中止时的重新获取
 
 #创建日志
 def getLogger(filename='weiboloader.log') -> Logger:
@@ -274,6 +274,8 @@ def mainTopic(wait,browser,hotrank:dict,mainlog:Logger,hourlog:Logger,hour:int):
 
 #主函数
 def main():
+    global currentRank
+
     #主日志
     mainlogname='./logs/weiboloader.log'
     mainlog=getLogger(filename=mainlogname)
@@ -319,6 +321,7 @@ def main():
             log(mainlog,'FETCH-HOUR: '+str(hour)+' TIME-USED: '+str(et-st)+'s')
             fetched[hour]=1
             fetchcount+=1
+            currentRank = 0
             #关闭浏览器
             #因为浏览器在运行中可能由于运行时的错误已经非正常关闭，因此添加try...except...语句
             try:
