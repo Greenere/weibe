@@ -27,7 +27,8 @@ except:
     print('ANALYSIS NOT IMPORTED')
 
 scrollNum:int=0 #滚动次数，控制获取的微博数目
-currentRank:int=0 #当前话题排序号，用于异常中止时的重新获取
+currentRank:int=-1 #当前话题排序号，用于异常中止时的重新获取
+crawling:bool=False
 
 #创建日志
 def getLogger(filename='weiboloader.log') -> Logger:
@@ -103,7 +104,7 @@ def hotRank(wait,browser,logger,hour:int=time.localtime().tm_hour) -> dict:
 def fetchTopic(wait,browser,logger,topic:str,rank:int=0,scrollnum:int=20,hour:int=time.localtime().tm_hour) -> dict:
     stf=time.time()
     #!!!此时浏览器已经打开可以搜索的微博页面
-    browser.execute_script('window.scrollTo(0,0)')
+    #browser.execute_script('window.scrollTo(0,0)')
     #搜索该话题
     searchInput=browser.find_element_by_tag_name('input')
     searchInput.clear()
@@ -211,7 +212,7 @@ def jsonSave(content,fname:str):
         f.write(json.dumps(content,indent=2,ensure_ascii=False))
 
 #获取热搜榜主循环函数
-def mainHotRank(wait,browser,mainlog:Logger,hourlog:Logger,hour:int) -> dict:
+def mainHotRank(wait,browser,mainlog:Logger,hourlog:Logger,hour:int):
     log(mainlog, 'HOT-RANK NOT THERE YET HOUR: ' + str(hour))
     maxtry_rank: int = 5 #最大尝试次数
     succeeded:bool=False
@@ -225,12 +226,12 @@ def mainHotRank(wait,browser,mainlog:Logger,hourlog:Logger,hour:int) -> dict:
             break
         except:
             log(mainlog, 'FAILURE-LEFT: ' + str(maxtry_rank-i-1))
-            time.sleep(2)
+            browser.close()
+            wait, browser = getBrowser()
             continue
     if not succeeded:
         log(mainlog, 'HOT-RANK-FETCH-MAXTRY-EXCEEDED')
-    hotrank:dict=fetchHotRankLocal(hour)
-    return hotrank
+    return browser
 
 #获取话题相关微博主循环函数
 def mainTopic(wait,browser,hotrank:dict,mainlog:Logger,hourlog:Logger,hour:int):
@@ -240,7 +241,7 @@ def mainTopic(wait,browser,hotrank:dict,mainlog:Logger,hourlog:Logger,hour:int):
     #访问微博搜索页
     reachWeibo(wait, browser, hourlog)
     #依次获取热搜榜五十个话题的相关微博
-    for rank in range(currentRank,50):
+    for rank in range(currentRank+1,50):
         log(mainlog, 'FETCHING-RANK: ' + str(rank))
         maxtry_topic: int = 3 #最大尝试次数
         succeeded:bool=False
@@ -270,12 +271,15 @@ def mainTopic(wait,browser,hotrank:dict,mainlog:Logger,hourlog:Logger,hour:int):
                 reachWeibo(wait,browser,hourlog)
         if not succeeded:
             log(mainlog, 'TOPIC-WEIBO-FETCH-MAXTRY-EXCEEDED')
+        time.sleep(2)
     return browser
 
 #主函数
-def main():
+def main(once=False):
     global currentRank
+    global crawling
 
+    print('MAIN LOADER STARTED, ONCE?: ',once)
     #主日志
     mainlogname='./logs/weiboloader.log'
     mainlog=getLogger(filename=mainlogname)
@@ -298,17 +302,15 @@ def main():
             hourlog=getLogger(filename=hourlogname)
             st=time.time()
             #启动浏览器
-            try:
-                wait,browser=getBrowser()
-            except:
-                continue
+            wait,browser=getBrowser()
             log(mainlog,'BROWSER AND CLIENT INITIATED')
             #获取热搜榜，进入主话题循环
-            hotrank=mainHotRank(wait=wait,
+            browser=mainHotRank(wait=wait,
                                 browser=browser,
                                 mainlog=mainlog,
                                 hourlog=hourlog,
                                 hour=hour)
+            hotrank:dict=fetchHotRankLocal(hour=hour)
             try:
                 browser=mainTopic(wait=wait,
                                   browser=browser,
@@ -323,7 +325,7 @@ def main():
             log(mainlog,'FETCH-HOUR: '+str(hour)+' TIME-USED: '+str(et-st)+'s')
             fetched[hour]=1
             fetchcount+=1
-            currentRank = 0
+            currentRank = -1
             #关闭浏览器
             #因为浏览器在运行中可能由于运行时的错误已经非正常关闭，因此添加try...except...语句
             try:
@@ -331,6 +333,9 @@ def main():
             except:
                 pass
         else:
+            if once:
+                crawling=False
+                break
             #计算当前小时剩余时间，进行休眠以节约资源
             min:int=time.localtime().tm_min
             log(mainlog,'READY TO SLEEP FOR: '+str(60-min)+' min')
@@ -339,4 +344,5 @@ def main():
             log(mainlog,'WAKE UP!')
 
 if __name__ == '__main__':
-    freeze_support()
+    main()
+    #freeze_support()

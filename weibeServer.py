@@ -3,12 +3,14 @@ import pymongo
 import time
 import math
 import os
-import threading
+
+from threading import Thread
+from weiboLoader import main
 import gc
 
 from flask import Flask, request,jsonify,send_from_directory,send_file
 from pyecharts.charts import WordCloud
-from weiboLoader import getLogger,log
+from weiboLoader import getLogger,log,crawling
 
 discardwords:list=['#', '【', '】', ',', '，', '##','的','是','了','在'] #词云构建时的弃用词
 exampleHour:int=27 #示例小时（虚拟时间）
@@ -68,6 +70,11 @@ servelog=getLogger('./logs/server.log')
 
 @app.route('/')
 def index():
+    global crawling
+    
+    if not crawling:
+        Thread(target=main,args=(True,)).start()
+        crawling=True
     filename='./frontend/index.html'
     return send_file(filename)
 
