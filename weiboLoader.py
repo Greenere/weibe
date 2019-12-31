@@ -263,7 +263,7 @@ def mainTopic(wait,browser,hotrank:dict,mainlog:Logger,hourlog:Logger,hour:int):
                 gc.collect()
                 break
             except:
-                log(mainlog, 'FAILURE-FETCH-TOPIC LEFT: ' + str(maxtry_topic-i-1))
+                log(mainlog, 'FAILURE-FETCH-TOPIC LEFT: ' + str(maxtry_topic-i-1)+' CURRENT-RANK: '+str(currentRank))
                 #出现失败往往是被识别出来了，因此重新创建浏览器进行搜索
                 browser.close()
                 wait,browser=getBrowser()
