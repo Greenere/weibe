@@ -5,13 +5,14 @@ import math
 import os
 
 from threading import Thread
-from weiboLoader import main
-import gc
+from weiboLoader import main,getLogger,log,crawling
 
-from functools import reduce
+if not crawling:
+    Thread(target=main,args=(False,),name='weibeloader',daemon=True).start()
+    crawling=True
+
 from flask import Flask, request,jsonify,send_from_directory,send_file
 from pyecharts.charts import WordCloud
-from weiboLoader import getLogger,log,crawling
 
 discardwords:list=['#', '【', '】', ',', '，', '##','的','是','了','在'] #词云构建时的弃用词
 exampleHour:int=27 #示例小时（虚拟时间）
@@ -58,10 +59,6 @@ def setWordCloud(ranks:list,hour:int) -> list:
     except:
         cloudseries=[]
     return cloudseries
-
-if not crawling:
-    Thread(target=main,args=(False,),name='weibeloader',daemon=True).start()
-    crawling=True
 
 app = Flask(__name__)
 

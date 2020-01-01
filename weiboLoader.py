@@ -17,7 +17,6 @@ from logging import Formatter
 from logging.handlers import RotatingFileHandler
 from logging import Logger
 
-from multiprocessing import freeze_support
 from snownlp import SnowNLP
 
 try:
@@ -348,4 +347,3 @@ def main(once=False):
 
 if __name__ == '__main__':
     main()
-    #freeze_support()
