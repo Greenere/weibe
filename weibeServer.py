@@ -8,6 +8,7 @@ from threading import Thread
 from weiboLoader import main
 import gc
 
+from functools import reduce
 from flask import Flask, request,jsonify,send_from_directory,send_file
 from pyecharts.charts import WordCloud
 from weiboLoader import getLogger,log,crawling
@@ -35,19 +36,14 @@ def setWordCloud(ranks:list,hour:int) -> list:
         client = pymongo.MongoClient('mongodb://localhost:27017/')
         wc = WordCloud()
         words:list = []
-        for rank in ranks:
-            weibos = fetchTopicLocal(client,rank, hour)
-            words.extend(weibos['words'])
+        list(map(lambda x:words.extend(x),
+                 [fetchTopicLocal(client,rank, hour)['words']
+                  for rank in ranks]))
         client.close()
         #词频统计
         textdict:dict={}
-        for wd in words:
-            if wd in discardwords:
-                continue
-            try:
-                textdict[wd]+=1
-            except:
-                textdict[wd]=1
+        for wd in filter(lambda wd:wd not in discardwords,words):
+            textdict[wd]=textdict.get(wd,0)+1
         wordpair:list=list(textdict.items())
         wordpair.sort(key=lambda i:i[1],reverse=True)
         wc.add("", wordpair, word_size_range=[10, 100], rotate_step=1, word_gap=20)
@@ -64,7 +60,7 @@ def setWordCloud(ranks:list,hour:int) -> list:
     return cloudseries
 
 if not crawling:
-    Thread(target=main,args=(False,),name='weibeloader').start()
+    Thread(target=main,args=(False,),name='weibeloader',daemon=True).start()
     crawling=True
 
 app = Flask(__name__)

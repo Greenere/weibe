@@ -130,21 +130,22 @@ def fetchTopic(wait,browser,logger,topic:str,rank:int=0,scrollnum:int=20,hour:in
     i:int=0
     for card in cardList:
         try:
-            c:dict = {}
-            c['topic']=topic
-            c['author'] = card.find_element_by_css_selector('.weibo-top .m-text-cut').text
-            c['content'] = card.find_element_by_css_selector('.weibo-main .weibo-text').text
-            ctrls:list = card.find_elements_by_css_selector('.m-ctrl-box .m-diy-btn')
-            basei:int=1 if len(ctrls)>3 else 0
-            c['reposts'] = parseCtrls(ctrls[basei+0].text)
-            c['comments'] = parseCtrls(ctrls[basei+1].text)
-            c['attitudes'] = parseCtrls(ctrls[basei+2].text)
-            positive=calculatePositive(u''.join(c['content']))
-            c['positive']=positive
-            cards.append(c)
+            content:str=card.find_element_by_css_selector('.weibo-main .weibo-text').text
+            ctrls: list = card.find_elements_by_css_selector('.m-ctrl-box .m-diy-btn')
+            basei: int = 1 if len(ctrls) > 3 else 0
+            positive=calculatePositive(u''.join(content))
+            cards.append({
+                'topic':topic,
+                'author':card.find_element_by_css_selector('.weibo-top .m-text-cut').text,
+                'content':content,
+                'reposts':parseCtrls(ctrls[basei+0].text),
+                'comments':parseCtrls(ctrls[basei+1].text),
+                'attitudes':parseCtrls(ctrls[basei+2].text),
+                'positive':positive
+            })
             log(logger,'PARSED: '+str(i)+' POSITIVE: '+str(positive))
             i+=1
-            words.extend(jieba.cut(c['content']))#分词以便于生成词云
+            words.extend(jieba.cut(content))#分词以便于生成词云
         except:
             log(logger,'PARSE ERROR: '+str(i))
             i+=1
@@ -300,7 +301,10 @@ def main(once=False):
             hourlog=getLogger(filename=hourlogname)
             st=time.time()
             #启动浏览器
-            wait,browser=getBrowser()
+            try:
+                wait,browser=getBrowser()
+            except:
+                continue
             log(mainlog,'BROWSER AND CLIENT INITIATED')
             #获取热搜榜，进入主话题循环
             browser=mainHotRank(wait=wait,
@@ -330,6 +334,7 @@ def main(once=False):
                 browser.close()
             except:
                 pass
+            del browser
         else:
             if once:
                 crawling=False
