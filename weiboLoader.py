@@ -18,6 +18,9 @@ from logging.handlers import RotatingFileHandler
 from logging import Logger
 
 from snownlp import SnowNLP
+from requests import Session,Request
+from urllib.parse import urlunparse,urlparse
+import re
 
 try:
     from Analysis import Analysis
@@ -25,9 +28,17 @@ try:
 except:
     print('ANALYSIS NOT IMPORTED')
 
-scrollNum:int=0 #滚动次数，控制获取的微博数目
+scrollNum:int=5 #滚动次数，控制获取的微博数目
 currentRank:int=-1 #当前话题排序号，用于异常中止时的重新获取
 crawling:bool=False
+
+headers={
+    'Accept': 'application/json, text/plain, */*',
+    'MWeibo-Pwa': '1',
+    'Referer':'',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.88 Safari/537.36',
+    'X-Requested-With': 'XMLHttpRequest'
+}
 
 #创建日志
 def getLogger(filename='weiboloader.log') -> Logger:
@@ -98,6 +109,83 @@ def hotRank(wait,browser,logger,hour:int=time.localtime().tm_hour) -> dict:
     client.close()
     log(logger, 'HOT RANK SAVED TO MONGODB')
     return hot
+
+def fetchTopicByRequests(wait,browser,logger,topic:str,rank:int=0,scrollnum:int=20,hour:int=time.localtime().tm_hour) -> dict:
+    global headers
+
+    stf = time.time()
+    # !!!此时浏览器已经打开可以搜索的微博页面
+    # browser.execute_script('window.scrollTo(0,0)')
+    # 搜索该话题
+    searchInput = browser.find_element_by_tag_name('input')
+    searchInput.clear()
+    searchInput.send_keys('#' + topic + '#')
+    time.sleep(random.randint(1, 2))
+    searchInput.send_keys(Keys.ENTER)
+    wait.until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, '.m-box'))
+    )
+    log(logger, 'SEARCHED TOPIC: #' + topic + '#')
+
+    currentURL=browser.current_url
+    parsed_url = urlparse(currentURL)
+    headers['Referer']=currentURL
+
+    cards:list = []
+    words:list = []
+    cardList:list = []
+
+    for page in range(scrollNum):
+        rsleep = 1
+        log(logger, 'SCROLLING: ' + str(page) + ' WAIT: ' + str(rsleep))
+        if page == 0:
+            pqstr: str = '&page_type=searchall'
+        else:
+            pqstr: str = '&page_type=searchall&page=' + str(page+1)
+        req_query: str = parsed_url.query + pqstr
+        req_url = urlunparse(['https', 'm.weibo.cn', '/api/container/getIndex', '', req_query, ''])
+        reqs = Request('GET', req_url, headers=headers)
+        sess = Session()
+        resp = dict(sess.send(sess.prepare_request(reqs)).json())
+        cardList.extend(resp['data']['cards'])
+        time.sleep(rsleep)
+
+    i:int=0
+    for card in cardList:
+        try:
+            author = card['mblog']['user']['screen_name']
+            content = card['mblog']['text']
+            content = re.sub('<[^<]+?>', '', content).replace('\n', '').strip()
+            reposts = card['mblog']['reposts_count']
+            comments = card['mblog']['comments_count']
+            attitudes = card['mblog']['attitudes_count']
+            positive = calculatePositive(u''.join(content))
+            cards.append({
+                'topic': topic,
+                'author': author,
+                'content': content,
+                'reposts': reposts,
+                'comments': comments,
+                'attitudes': attitudes,
+                'positive': positive
+            })
+            log(logger, 'PARSED: ' + str(i) + ' POSITIVE: ' + str(positive))
+            i+=1
+            words.extend(jieba.cut(content))
+        except:
+            log(logger, 'PARSE ERROR: ' + str(i))
+            i += 1
+            continue
+    weibos: dict = {'cards': cards, 'topic': topic, 'words': words}
+    # 保存该话题相关微博
+    colname: str = str(hour) + '#' + str(rank)
+    client = pymongo.MongoClient('mongodb://localhost:27017/')
+    mongoClear(client, 'weiboTopics', colname)
+    mongoSave(client, weibos, 'weiboTopics', colname)
+    client.close()
+    etf = time.time()
+    log(logger, 'TOPIC: #' + topic + '# FETCHED TIME-USED: ' + str(etf - stf))
+    return weibos
 
 #获取指定话题的相关微博
 def fetchTopic(wait,browser,logger,topic:str,rank:int=0,scrollnum:int=20,hour:int=time.localtime().tm_hour) -> dict:
@@ -252,7 +340,7 @@ def mainTopic(wait,browser,hotrank:dict,mainlog:Logger,hourlog:Logger,hour:int):
         for i in range(maxtry_topic):
             try:
                 topic = hotrank['rank'][str(rank)]
-                fetchTopic(wait=wait,
+                fetchTopicByRequests(wait=wait,
                            browser=browser,
                            logger=hourlog,
                            topic=topic,
