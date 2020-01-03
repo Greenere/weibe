@@ -32,7 +32,7 @@ scrollNum:int=5 #滚动次数，控制获取的微博数目
 currentRank:int=-1 #当前话题排序号，用于异常中止时的重新获取
 crawling:bool=False
 
-headers={
+headers:dict={
     'Accept': 'application/json, text/plain, */*',
     'MWeibo-Pwa': '1',
     'Referer':'',
@@ -110,12 +110,15 @@ def hotRank(wait,browser,logger,hour:int=time.localtime().tm_hour) -> dict:
     log(logger, 'HOT RANK SAVED TO MONGODB')
     return hot
 
+def fetchTopic(wait,browser,logger,topic:str,rank:int=0,scrollnum:int=20,hour:int=time.localtime().tm_hour) -> dict:
+    return fetchTopicByRequests(wait,browser,logger,topic,rank,scrollnum,hour)
+
+#获取指定话题的相关微博
 def fetchTopicByRequests(wait,browser,logger,topic:str,rank:int=0,scrollnum:int=20,hour:int=time.localtime().tm_hour) -> dict:
     global headers
 
     stf = time.time()
     # !!!此时浏览器已经打开可以搜索的微博页面
-    # browser.execute_script('window.scrollTo(0,0)')
     # 搜索该话题
     searchInput = browser.find_element_by_tag_name('input')
     searchInput.clear()
@@ -135,19 +138,22 @@ def fetchTopicByRequests(wait,browser,logger,topic:str,rank:int=0,scrollnum:int=
     words:list = []
     cardList:list = []
 
-    for page in range(scrollNum):
+    for page in range(scrollnum):
         rsleep = 1
         log(logger, 'SCROLLING: ' + str(page) + ' WAIT: ' + str(rsleep))
         if page == 0:
-            pqstr: str = '&page_type=searchall'
+            extra_str: str = '&page_type=searchall'
         else:
-            pqstr: str = '&page_type=searchall&page=' + str(page+1)
-        req_query: str = parsed_url.query + pqstr
-        req_url = urlunparse(['https', 'm.weibo.cn', '/api/container/getIndex', '', req_query, ''])
-        reqs = Request('GET', req_url, headers=headers)
+            extra_str: str = '&page_type=searchall&page=' + str(page+1)
+        request_query: str = parsed_url.query + extra_str
+        request_url = urlunparse(['https', 'm.weibo.cn', '/api/container/getIndex', '', request_query, ''])
+        request = Request('GET', request_url, headers=headers)
         sess = Session()
-        resp = dict(sess.send(sess.prepare_request(reqs)).json())
-        cardList.extend(resp['data']['cards'])
+        response = dict(sess.send(sess.prepare_request(request)).json())
+        try:
+            cardList.extend(response['data']['cards'])
+        except:
+            pass
         time.sleep(rsleep)
 
     i:int=0
@@ -188,10 +194,9 @@ def fetchTopicByRequests(wait,browser,logger,topic:str,rank:int=0,scrollnum:int=
     return weibos
 
 #获取指定话题的相关微博
-def fetchTopic(wait,browser,logger,topic:str,rank:int=0,scrollnum:int=20,hour:int=time.localtime().tm_hour) -> dict:
+def fetchTopicByBrowser(wait,browser,logger,topic:str,rank:int=0,scrollnum:int=20,hour:int=time.localtime().tm_hour) -> dict:
     stf=time.time()
     #!!!此时浏览器已经打开可以搜索的微博页面
-    #browser.execute_script('window.scrollTo(0,0)')
     #搜索该话题
     searchInput=browser.find_element_by_tag_name('input')
     searchInput.clear()
@@ -340,7 +345,7 @@ def mainTopic(wait,browser,hotrank:dict,mainlog:Logger,hourlog:Logger,hour:int):
         for i in range(maxtry_topic):
             try:
                 topic = hotrank['rank'][str(rank)]
-                fetchTopicByRequests(wait=wait,
+                fetchTopic(wait=wait,
                            browser=browser,
                            logger=hourlog,
                            topic=topic,
@@ -349,6 +354,7 @@ def mainTopic(wait,browser,hotrank:dict,mainlog:Logger,hourlog:Logger,hour:int):
                            hour=hour)
                 succeeded=True
                 currentRank=rank
+                time.sleep(3)
                 break
             except:
                 log(mainlog, 'FAILURE-FETCH-TOPIC LEFT: ' + str(maxtry_topic-i-1)+' CURRENT-RANK: '+str(currentRank))
