@@ -28,7 +28,7 @@ try:
 except:
     print('ANALYSIS NOT IMPORTED')
 
-scrollNum:int=5 #滚动次数，控制获取的微博数目
+scrollNum:int=0 #滚动次数，控制获取的微博数目
 currentRank:int=-1 #当前话题排序号，用于异常中止时的重新获取
 crawling:bool=False
 
@@ -111,7 +111,7 @@ def hotRank(wait,browser,logger,hour:int=time.localtime().tm_hour) -> dict:
     return hot
 
 def fetchTopic(wait,browser,logger,topic:str,rank:int=0,scrollnum:int=20,hour:int=time.localtime().tm_hour) -> dict:
-    return fetchTopicByRequests(wait,browser,logger,topic,rank,scrollnum,hour)
+    return fetchTopicByBrowser(wait,browser,logger,topic,rank,scrollnum,hour)
 
 #获取指定话题的相关微博
 def fetchTopicByRequests(wait,browser,logger,topic:str,rank:int=0,scrollnum:int=20,hour:int=time.localtime().tm_hour) -> dict:
@@ -150,6 +150,7 @@ def fetchTopicByRequests(wait,browser,logger,topic:str,rank:int=0,scrollnum:int=
         request = Request('GET', request_url, headers=headers)
         sess = Session()
         response = dict(sess.send(sess.prepare_request(request)).json())
+        print(response)
         try:
             cardList.extend(response['data']['cards'])
         except:
