@@ -1,3 +1,5 @@
+This is an archived project for personal memorization. 这是一个备份项目，仅作纪念。
+
 ## 微情感-WEIBEMOTION
 
 大数据课程设计：微博情感分析系统
